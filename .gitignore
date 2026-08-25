@@ -9,3 +9,4 @@ coverage
 .liquidmap-history/
 .liquidmap-backups/
 .DS_Store
+.local-run/

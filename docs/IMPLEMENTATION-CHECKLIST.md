@@ -29,7 +29,7 @@ Tanda: `[x]` selesai · `[~]` sebagian/bersyarat · `[ ]` belum diimplementasika
 - [x] Graceful shutdown menyelesaikan buffer
 - [x] Frontend: panel alasan degraded, last-update, freeze sinyal, error boundary
 - [x] Fault injection, burst test, replay determinism
-- [ ] **GATE:** Soak test 8 jam penuh
+- [ ] **GATE:** Soak test 8 jam penuh — 🟡 eksekusi berjalan sejak 25 Agu (background, feed demo); bukti & status: `docs/gates/external-gates.md`
 - [ ] **GATE:** Live capture berizin (legal)
 
 ## Fase 2 — Penyimpanan Historis dan Replay (`CONDITIONAL EXIT`)
@@ -121,7 +121,7 @@ Detail pelaksanaan: [`phase-4/exit-report.md`](./phase-4/exit-report.md).
 - [x] Test: `marketInsights.test.ts` (7), `alertEngine.test.ts` (5), `phase5Surface.test.ts` (3) — WS insight/alert end-to-end + CRUD
 - [x] `npm run phase5:validate` → 3/3 PASS (determinism, cooldown/shadow, horizons) → `docs/baselines/phase-5-validation.{json,md}`
 - [ ] **GATE:** Kalibrasi multiplier baseline dengan data Binance live (jalankan shadow mode dulu di produksi)
-- [ ] **GATE:** Uji delivery webhook/Telegram dengan penyedia nyata
+- [~] **GATE:** Uji delivery webhook/Telegram dengan penyedia nyata — jalur webhook terbukti e2e via mock receiver (bukti: `docs/baselines/webhook-delivery-e2e.md`); sisa: provider eksternal nyata + jaringan bersih
 
 Detail pelaksanaan: [`phase-5/exit-report.md`](./phase-5/exit-report.md).
 
