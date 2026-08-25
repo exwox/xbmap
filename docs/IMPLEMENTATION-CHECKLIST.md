@@ -162,7 +162,7 @@ Detail pelaksanaan: [`phase-5/exit-report.md`](./phase-5/exit-report.md).
 - [ ] Proteksi auth/port terpisah untuk `/metrics` & endpoint observability
 - [ ] Artefak baseline validasi fase 2/3 ke `docs/baselines/`
 - [ ] Link mati `docs/baselines/phase-2-validation.md` di exit-report fase 2
-- [ ] CI pipeline (type-check + unit test + build sebagai gate PR)
+- [x] CI pipeline (`.github/workflows/ci.yml`: typecheck + unit tests + validasi offline fase 4/5 pada Node 22 & 24, plus job build produksi dengan artifact `dist/`)
 
 ---
 
