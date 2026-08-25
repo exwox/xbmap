@@ -527,10 +527,16 @@ export function createMarketHttpServer(
     }));
     const failing = checks.filter((check) => !check.ready).map((check) => check.symbol);
     const ready = failing.length === 0;
+    // Legacy single-gateway fields stay on the payload so existing probes and
+    // validators keep working next to the aggregated session view.
+    const legacy = isGatewayReady(gateway);
     response.status(ready ? 200 : 503).json({
       ok: ready,
       schemaVersion: SCHEMA_VERSION,
       serverTimestamp: Date.now(),
+      source: legacy.source,
+      state: legacy.state,
+      marketDataValid: legacy.marketDataValid,
       activeSessions: checks.length,
       failingSymbols: failing,
       reason: ready

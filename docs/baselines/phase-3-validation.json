@@ -1,0 +1,251 @@
+{
+  "validationSchemaVersion": 1,
+  "kind": "phase-3-observability-validation",
+  "deterministicInputs": true,
+  "generatedAt": "2026-08-25T18:20:34.985Z",
+  "cases": [
+    {
+      "id": "metrics_exposition",
+      "passed": true,
+      "durationMs": 87.088,
+      "assertions": [
+        {
+          "name": "metrics endpoint returns 200",
+          "passed": true,
+          "expected": 200,
+          "actual": 200
+        },
+        {
+          "name": "content-type is text/plain",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "all catalog families present",
+          "passed": true,
+          "expected": 0,
+          "actual": 0
+        },
+        {
+          "name": "http_requests_total present",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "alerts_emitted_total present",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        }
+      ],
+      "observations": {
+        "missingFamilies": [],
+        "expositionLength": 5400
+      },
+      "notes": []
+    },
+    {
+      "id": "liveness_readiness",
+      "passed": true,
+      "durationMs": 27.278,
+      "assertions": [
+        {
+          "name": "liveness returns 200",
+          "passed": true,
+          "expected": 200,
+          "actual": 200
+        },
+        {
+          "name": "liveness ok=true",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "readiness returns 200 or 503",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "ready has reason",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "ready has marketDataValid",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "ready has state",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        }
+      ],
+      "observations": {
+        "liveStatus": 200,
+        "readyStatus": 200,
+        "readyState": "demo",
+        "readySource": "demo"
+      },
+      "notes": []
+    },
+    {
+      "id": "alert_evaluation",
+      "passed": true,
+      "durationMs": 34.749,
+      "assertions": [
+        {
+          "name": "alerts endpoint returns 200",
+          "passed": true,
+          "expected": 200,
+          "actual": 200
+        },
+        {
+          "name": "active alerts is array",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "recent alerts is array",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "incidents endpoint returns 200",
+          "passed": true,
+          "expected": 200,
+          "actual": 200
+        },
+        {
+          "name": "incident recorded",
+          "passed": true,
+          "expected": 1,
+          "actual": 1
+        }
+      ],
+      "observations": {
+        "activeAlerts": 5,
+        "recentAlerts": 0,
+        "incidents": {
+          "schemaVersion": 1,
+          "serverTimestamp": 1787682034909,
+          "incidentCount": 1,
+          "incidents": [
+            {
+              "at": 1787682034886,
+              "kind": "queue_overflow",
+              "message": "test overflow",
+              "category": "data-quality",
+              "metric": "gateway_dropped_frame_total",
+              "value": 1
+            }
+          ]
+        }
+      },
+      "notes": []
+    },
+    {
+      "id": "alert_failure_simulation",
+      "passed": true,
+      "durationMs": 16.236,
+      "assertions": [
+        {
+          "name": "memory_pressure fired from injected sampler",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "message flags the critical threshold crossing",
+          "passed": true,
+          "expected": "includes \"critical\"",
+          "actual": "Heap usage 95.0% (critical >= 90%)"
+        },
+        {
+          "name": "active rule visible on the alerts HTTP surface",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "alerts_emitted_total carries the memory_pressure rule",
+          "passed": true,
+          "expected": "includes \"alerts_emitted_total{rule=\"memory_pressure\"\"",
+          "actual": "# HELP alerts_emitted_total Operational alerts fired\n# TYPE alerts_emitted_total counter\nalerts_emitted_total{rule=\"memory_pressure\",severity=\"warning\"} 1\n# HELP gateway_connection_state Current conne..."
+        },
+        {
+          "name": "transition retained in the recent buffer",
+          "passed": true,
+          "expected": "includes \"true\"",
+          "actual": "true"
+        }
+      ],
+      "observations": {
+        "message": "Heap usage 95.0% (critical >= 90%)",
+        "activeRules": [
+          "stale_feed",
+          "sequence_gap",
+          "recovery_loop",
+          "http_error_rate",
+          "memory_pressure"
+        ]
+      },
+      "notes": []
+    },
+    {
+      "id": "metrics_stability",
+      "passed": true,
+      "durationMs": 57.633,
+      "assertions": [
+        {
+          "name": "metrics render produces string",
+          "passed": true,
+          "expected": "string",
+          "actual": "string"
+        },
+        {
+          "name": "metrics output non-empty",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "metrics output ends with newline",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "stable sorted output",
+          "passed": true,
+          "expected": "# HELP alerts_emitted_total Operational alerts fired\n# TYPE alerts_emitted_total counter\n# HELP gateway_connection_state Current connection state hot(1)/cold(0)\n# TYPE gateway_connection_state gauge\n# HELP gateway_dropped_frame_total Frames dropped to protect the pipeline\n# TYPE gateway_dropped_frame_total counter\n# HELP gateway_event_processing_ms Per-item feed processing latency\n# TYPE gateway_event_processing_ms histogram\ngateway_event_processing_ms_bucket{le=\"1\",symbol=\"BTCUSDT\",type=\"snapshot\"} 0\ngateway_event_processing_ms_bucket{le=\"2.5\",symbol=\"BTCUSDT\",type=\"snapshot\"} 1\ngateway_event_processing_ms_bucket{le=\"5\",symbol=\"BTCUSDT\",type=\"snapshot\"} 1\ngateway_event_processing_ms_bucket{le=\"10\",symbol=\"BTCUSDT\",type=\"snapshot\"} 1\ngateway_event_processing_ms_bucket{le=\"25\",symbol=\"BTCUSDT\",type=\"snapshot\"} 1\ngateway_event_processing_ms_bucket{le=\"50\",symbol=\"BTCUSDT\",type=\"snapshot\"} 1\ngateway_event_processing_ms_bucket{le=\"100\",symbol=\"BTCUSDT\",type=\"snapshot\"} 1\ngateway_event_processing_ms_bucket{le=\"250\",symbol=\"BTCUSDT\",type=\"snapshot\"} 1\ngateway_event_processing_ms_bucket{le=\"500\",symbol=\"BTCUSDT\",type=\"snapshot\"} 1\ngateway_event_processing_ms_bucket{le=\"1000\",symbol=\"BTCUSDT\",type=\"snapshot\"} 1\ngateway_event_processing_ms_bucket{le=\"2500\",symbol=\"BTCUSDT\",type=\"snapshot\"} 1\ngateway_event_processing_ms_bucket{le=\"5000\",symbol=\"BTCUSDT\",type=\"snapshot\"} 1\ngateway_event_processing_ms_bucket{le=\"10000\",symbol=\"BTCUSDT\",type=\"snapshot\"} 1\ngateway_event_processing_ms_bucket{le=\"+Inf\",symbol=\"BTCUSDT\",type=\"snapshot\"} 1\ngateway_event_processing_ms_sum{symbol=\"BTCUSDT\",type=\"snapshot\"} 1.42234\ngateway_event_processing_ms_count{symbol=\"BTCUSDT\",type=\"snapshot\"} 1\n# HELP gateway_frame_build_ms Frame build latency\n# TYPE gateway_frame_build_ms histogram\n# HELP gateway_queue_depth Pending ingestion queue depth\n# TYPE gateway_queue_depth gauge\n# HELP http_errors_total HTTP 5xx responses\n# TYPE http_errors_total counter\n# HELP http_request_duration_ms HTTP request latency\n# TYPE http_request_duration_ms histogram\nhttp_request_duration_ms_bucket{le=\"1\",method=\"GET\",route=\"/test\"} 0\nhttp_request_duration_ms_bucket{le=\"2.5\",method=\"GET\",route=\"/test\"} 0\nhttp_request_duration_ms_bucket{le=\"5\",method=\"GET\",route=\"/test\"} 1\nhttp_request_duration_ms_bucket{le=\"10\",method=\"GET\",route=\"/test\"} 1\nhttp_request_duration_ms_bucket{le=\"25\",method=\"GET\",route=\"/test\"} 1\nhttp_request_duration_ms_bucket{le=\"50\",method=\"GET\",route=\"/test\"} 1\nhttp_request_duration_ms_bucket{le=\"100\",method=\"GET\",route=\"/test\"} 1\nhttp_request_duration_ms_bucket{le=\"250\",method=\"GET\",route=\"/test\"} 1\nhttp_request_duration_ms_bucket{le=\"500\",method=\"GET\",route=\"/test\"} 1\nhttp_request_duration_ms_bucket{le=\"1000\",method=\"GET\",route=\"/test\"} 1\nhttp_request_duration_ms_bucket{le=\"2500\",method=\"GET\",route=\"/test\"} 1\nhttp_request_duration_ms_bucket{le=\"5000\",method=\"GET\",route=\"/test\"} 1\nhttp_request_duration_ms_bucket{le=\"10000\",method=\"GET\",route=\"/test\"} 1\nhttp_request_duration_ms_bucket{le=\"+Inf\",method=\"GET\",route=\"/test\"} 1\nhttp_request_duration_ms_sum{method=\"GET\",route=\"/test\"} 5\nhttp_request_duration_ms_count{method=\"GET\",route=\"/test\"} 1\n# HELP http_requests_total HTTP requests handled\n# TYPE http_requests_total counter\nhttp_requests_total{method=\"GET\",route=\"/test\",status=\"200\"} 1\n# HELP market_clock_drift_ms Exchange-to-server clock drift\n# TYPE market_clock_drift_ms gauge\n# HELP market_data_valid Gateway market data validity (1/0)\n# TYPE market_data_valid gauge\n# HELP market_events_received_total Normalized market events accepted from the feed\n# TYPE market_events_received_total counter\nmarket_events_received_total{exchange=\"demo\",symbol=\"BTCUSDT\",type=\"snapshot\"} 1\n# HELP market_events_rejected_total Feed events rejected before publication\n# TYPE market_events_rejected_total counter\n# HELP market_stale_duration_ms Duration of invalid/stale data\n# TYPE market_stale_duration_ms histogram\n# HELP orderbook_crossed_total Crossed-book invariant violations\n# TYPE orderbook_crossed_total counter\n# HELP orderbook_duplicate_total Duplicate events detected\n# TYPE orderbook_duplicate_total counter\n# HELP orderbook_out_of_order_total Out-of-order events detected\n# TYPE orderbook_out_of_order_total counter\n# HELP orderbook_resync_duration_ms Time to recover a valid book\n# TYPE orderbook_resync_duration_ms histogram\n# HELP orderbook_resync_total Recovery resyncs\n# TYPE orderbook_resync_total counter\n# HELP orderbook_sequence_gap_total Sequence gaps detected\n# TYPE orderbook_sequence_gap_total counter\n# HELP process_cpu_ratio Process CPU ratio of one core\n# TYPE process_cpu_ratio gauge\n# HELP process_heap_used_bytes JavaScript heap used bytes\n# TYPE process_heap_used_bytes gauge\n# HELP process_rss_bytes Process resident set size\n# TYPE process_rss_bytes gauge\n# HELP process_uptime_seconds Process uptime\n# TYPE process_uptime_seconds gauge\n# HELP websocket_buffered_bytes Per-client socket buffered bytes\n# TYPE websocket_buffered_bytes histogram\n# HELP websocket_clients Connected WebSocket clients\n# TYPE websocket_clients gauge\n# HELP websocket_frame_bytes Serialized frame bytes\n# TYPE websocket_frame_bytes histogram\n",
+          "actual": "# HELP alerts_emitted_total Operational alerts fired\n# TYPE alerts_emitted_total counter\n# HELP gateway_connection_state Current connection state hot(1)/cold(0)\n# TYPE gateway_connection_state gauge\n# HELP gateway_dropped_frame_total Frames dropped to protect the pipeline\n# TYPE gateway_dropped_frame_total counter\n# HELP gateway_event_processing_ms Per-item feed processing latency\n# TYPE gateway_event_processing_ms histogram\ngateway_event_processing_ms_bucket{le=\"1\",symbol=\"BTCUSDT\",type=\"snapshot\"} 0\ngateway_event_processing_ms_bucket{le=\"2.5\",symbol=\"BTCUSDT\",type=\"snapshot\"} 1\ngateway_event_processing_ms_bucket{le=\"5\",symbol=\"BTCUSDT\",type=\"snapshot\"} 1\ngateway_event_processing_ms_bucket{le=\"10\",symbol=\"BTCUSDT\",type=\"snapshot\"} 1\ngateway_event_processing_ms_bucket{le=\"25\",symbol=\"BTCUSDT\",type=\"snapshot\"} 1\ngateway_event_processing_ms_bucket{le=\"50\",symbol=\"BTCUSDT\",type=\"snapshot\"} 1\ngateway_event_processing_ms_bucket{le=\"100\",symbol=\"BTCUSDT\",type=\"snapshot\"} 1\ngateway_event_processing_ms_bucket{le=\"250\",symbol=\"BTCUSDT\",type=\"snapshot\"} 1\ngateway_event_processing_ms_bucket{le=\"500\",symbol=\"BTCUSDT\",type=\"snapshot\"} 1\ngateway_event_processing_ms_bucket{le=\"1000\",symbol=\"BTCUSDT\",type=\"snapshot\"} 1\ngateway_event_processing_ms_bucket{le=\"2500\",symbol=\"BTCUSDT\",type=\"snapshot\"} 1\ngateway_event_processing_ms_bucket{le=\"5000\",symbol=\"BTCUSDT\",type=\"snapshot\"} 1\ngateway_event_processing_ms_bucket{le=\"10000\",symbol=\"BTCUSDT\",type=\"snapshot\"} 1\ngateway_event_processing_ms_bucket{le=\"+Inf\",symbol=\"BTCUSDT\",type=\"snapshot\"} 1\ngateway_event_processing_ms_sum{symbol=\"BTCUSDT\",type=\"snapshot\"} 1.42234\ngateway_event_processing_ms_count{symbol=\"BTCUSDT\",type=\"snapshot\"} 1\n# HELP gateway_frame_build_ms Frame build latency\n# TYPE gateway_frame_build_ms histogram\n# HELP gateway_queue_depth Pending ingestion queue depth\n# TYPE gateway_queue_depth gauge\n# HELP http_errors_total HTTP 5xx responses\n# TYPE http_errors_total counter\n# HELP http_request_duration_ms HTTP request latency\n# TYPE http_request_duration_ms histogram\nhttp_request_duration_ms_bucket{le=\"1\",method=\"GET\",route=\"/test\"} 0\nhttp_request_duration_ms_bucket{le=\"2.5\",method=\"GET\",route=\"/test\"} 0\nhttp_request_duration_ms_bucket{le=\"5\",method=\"GET\",route=\"/test\"} 1\nhttp_request_duration_ms_bucket{le=\"10\",method=\"GET\",route=\"/test\"} 1\nhttp_request_duration_ms_bucket{le=\"25\",method=\"GET\",route=\"/test\"} 1\nhttp_request_duration_ms_bucket{le=\"50\",method=\"GET\",route=\"/test\"} 1\nhttp_request_duration_ms_bucket{le=\"100\",method=\"GET\",route=\"/test\"} 1\nhttp_request_duration_ms_bucket{le=\"250\",method=\"GET\",route=\"/test\"} 1\nhttp_request_duration_ms_bucket{le=\"500\",method=\"GET\",route=\"/test\"} 1\nhttp_request_duration_ms_bucket{le=\"1000\",method=\"GET\",route=\"/test\"} 1\nhttp_request_duration_ms_bucket{le=\"2500\",method=\"GET\",route=\"/test\"} 1\nhttp_request_duration_ms_bucket{le=\"5000\",method=\"GET\",route=\"/test\"} 1\nhttp_request_duration_ms_bucket{le=\"10000\",method=\"GET\",route=\"/test\"} 1\nhttp_request_duration_ms_bucket{le=\"+Inf\",method=\"GET\",route=\"/test\"} 1\nhttp_request_duration_ms_sum{method=\"GET\",route=\"/test\"} 5\nhttp_request_duration_ms_count{method=\"GET\",route=\"/test\"} 1\n# HELP http_requests_total HTTP requests handled\n# TYPE http_requests_total counter\nhttp_requests_total{method=\"GET\",route=\"/test\",status=\"200\"} 1\n# HELP market_clock_drift_ms Exchange-to-server clock drift\n# TYPE market_clock_drift_ms gauge\n# HELP market_data_valid Gateway market data validity (1/0)\n# TYPE market_data_valid gauge\n# HELP market_events_received_total Normalized market events accepted from the feed\n# TYPE market_events_received_total counter\nmarket_events_received_total{exchange=\"demo\",symbol=\"BTCUSDT\",type=\"snapshot\"} 1\n# HELP market_events_rejected_total Feed events rejected before publication\n# TYPE market_events_rejected_total counter\n# HELP market_stale_duration_ms Duration of invalid/stale data\n# TYPE market_stale_duration_ms histogram\n# HELP orderbook_crossed_total Crossed-book invariant violations\n# TYPE orderbook_crossed_total counter\n# HELP orderbook_duplicate_total Duplicate events detected\n# TYPE orderbook_duplicate_total counter\n# HELP orderbook_out_of_order_total Out-of-order events detected\n# TYPE orderbook_out_of_order_total counter\n# HELP orderbook_resync_duration_ms Time to recover a valid book\n# TYPE orderbook_resync_duration_ms histogram\n# HELP orderbook_resync_total Recovery resyncs\n# TYPE orderbook_resync_total counter\n# HELP orderbook_sequence_gap_total Sequence gaps detected\n# TYPE orderbook_sequence_gap_total counter\n# HELP process_cpu_ratio Process CPU ratio of one core\n# TYPE process_cpu_ratio gauge\n# HELP process_heap_used_bytes JavaScript heap used bytes\n# TYPE process_heap_used_bytes gauge\n# HELP process_rss_bytes Process resident set size\n# TYPE process_rss_bytes gauge\n# HELP process_uptime_seconds Process uptime\n# TYPE process_uptime_seconds gauge\n# HELP websocket_buffered_bytes Per-client socket buffered bytes\n# TYPE websocket_buffered_bytes histogram\n# HELP websocket_clients Connected WebSocket clients\n# TYPE websocket_clients gauge\n# HELP websocket_frame_bytes Serialized frame bytes\n# TYPE websocket_frame_bytes histogram\n"
+        },
+        {
+          "name": "render bounded below 100KB",
+          "passed": true,
+          "expected": "< 102400",
+          "actual": 5162
+        }
+      ],
+      "observations": {
+        "renderLength": 5162
+      },
+      "notes": []
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 0,
+    "allPassed": true
+  }
+}

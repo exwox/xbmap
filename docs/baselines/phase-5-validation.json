@@ -2,12 +2,12 @@
   "validationSchemaVersion": 1,
   "kind": "phase-5-deployment-validation",
   "deterministicInputs": true,
-  "generatedAt": "2026-08-25T18:01:35.737Z",
+  "generatedAt": "2026-08-25T18:23:07.440Z",
   "cases": [
     {
       "id": "insights-determinism",
       "passed": true,
-      "durationMs": 25,
+      "durationMs": 29,
       "assertions": [
         {
           "name": "identical frames across runs (algo insights-v1)",
@@ -185,6 +185,6 @@
     "passed": 3,
     "failed": 0,
     "allPassed": true,
-    "durationMs": 29
+    "durationMs": 33
   }
 }

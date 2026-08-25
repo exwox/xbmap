@@ -142,7 +142,7 @@ Detail pelaksanaan: [`phase-5/exit-report.md`](./phase-5/exit-report.md).
 - [ ] Halaman status sistem + release notes
 
 ### Keamanan
-- [ ] Threat modeling
+- [x] Threat modeling (`docs/security/threat-model.md`, STRIDE per permukaan)
 - [ ] Rate limit berbasis pengguna (per-IP sudah ada)
 - [x] CSP header produksi (`script-src 'self'` tanpa inline; `frame-ancestors 'none'`; ws/wss untuk live data)
 - [ ] Dependency & container scanning
@@ -153,7 +153,7 @@ Detail pelaksanaan: [`phase-5/exit-report.md`](./phase-5/exit-report.md).
 
 ### Operasional beta
 - [ ] Kelompok 10–30 pengguna pertama
-- [ ] Feature flag
+- [~] Feature flag (infrastruktur tersedia sejak Fase 6: `/api/v1/feature-flags` + konsumsi `alerts_panel` di UI; ekspansi flag lain mengikuti kebutuhan)
 - [ ] Feedback form in-app
 - [ ] Runbook disconnect/corruption/database failure
 - [ ] Rollback satu perintah
@@ -164,8 +164,8 @@ Detail pelaksanaan: [`phase-5/exit-report.md`](./phase-5/exit-report.md).
 - [x] Repo git rusak → diperbaiki (commit awal `ae011bd`)
 - [x] Handler `unhandledRejection` → ditambahkan di `server/index.ts`
 - [x] Proteksi `/metrics` & `/api/v1/observability/*` via `XBMAP_ADMIN_TOKEN` (`x-admin-token`/Bearer; port terpisah ditunda hingga kebutuhan deployment nyata)
-- [ ] Artefak baseline validasi fase 2/3 ke `docs/baselines/`
-- [ ] Link mati `docs/baselines/phase-2-validation.md` di exit-report fase 2
+- [x] Artefak baseline validasi fase 2/3 di `docs/baselines/phase-{2,3}-validation.{json,md}` (dihasilkan `phase2:validate` / `phase3:validate`)
+- [x] Link mati `docs/baselines/phase-2-validation.md` di exit-report fase 2 (artefak dibuat, link valid)
 - [x] CI pipeline (`.github/workflows/ci.yml`: typecheck + unit tests + validasi offline fase 4/5 pada Node 22 & 24, plus job build produksi dengan artifact `dist/`)
 
 ---

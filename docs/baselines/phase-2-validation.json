@@ -1,0 +1,400 @@
+{
+  "validationSchemaVersion": 1,
+  "kind": "phase-2-storage-replay-validation",
+  "deterministicInputs": true,
+  "generatedAt": "2026-08-25T18:20:33.767Z",
+  "cases": [
+    {
+      "id": "history-persists-after-restart",
+      "passed": true,
+      "durationMs": 1160.638,
+      "assertions": [
+        {
+          "name": "probe runs in a distinct OS process",
+          "passed": true,
+          "expected": false,
+          "actual": false
+        },
+        {
+          "name": "record count survives process restart",
+          "passed": true,
+          "expected": 600,
+          "actual": 600
+        },
+        {
+          "name": "ordered history digest survives process restart",
+          "passed": true,
+          "expected": "62ddf843d6c518be6d864d829802c26683544a63efc39b5de56c12cca345dcf3",
+          "actual": "62ddf843d6c518be6d864d829802c26683544a63efc39b5de56c12cca345dcf3"
+        },
+        {
+          "name": "restart query is complete",
+          "passed": true,
+          "expected": false,
+          "actual": false
+        }
+      ],
+      "observations": {
+        "parentProcessId": 1185038,
+        "restartProcessId": 1185063,
+        "records": 600,
+        "segments": 3,
+        "compressedBytes": 18886,
+        "digest": "62ddf843d6c518be6d864d829802c26683544a63efc39b5de56c12cca345dcf3"
+      },
+      "notes": [
+        "The verification query is executed by a separately spawned Node.js process over the durable directory."
+      ]
+    },
+    {
+      "id": "bounded-history-query",
+      "passed": true,
+      "durationMs": 216.214,
+      "assertions": [
+        {
+          "name": "oversized time range is rejected",
+          "passed": true,
+          "expected": "RANGE_LIMIT",
+          "actual": "RANGE_LIMIT"
+        },
+        {
+          "name": "oversized row request is rejected",
+          "passed": true,
+          "expected": "ROW_LIMIT",
+          "actual": "ROW_LIMIT"
+        },
+        {
+          "name": "oversized segment scan is rejected",
+          "passed": true,
+          "expected": "SEGMENT_LIMIT",
+          "actual": "SEGMENT_LIMIT"
+        },
+        {
+          "name": "oversized compressed-byte scan is rejected",
+          "passed": true,
+          "expected": "BYTE_LIMIT",
+          "actual": "BYTE_LIMIT"
+        },
+        {
+          "name": "bounded result obeys row limit",
+          "passed": true,
+          "expected": 10,
+          "actual": 10
+        },
+        {
+          "name": "bounded result advertises truncation",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "bounded result supplies pagination cursor",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        }
+      ],
+      "observations": {
+        "maxRangeMs": 60000,
+        "maxRows": 50,
+        "storedSegments": 3,
+        "returnedRows": 10
+      },
+      "notes": []
+    },
+    {
+      "id": "history-backup-restore",
+      "passed": true,
+      "durationMs": 265.273,
+      "assertions": [
+        {
+          "name": "backup records every source row",
+          "passed": true,
+          "expected": 750,
+          "actual": 750
+        },
+        {
+          "name": "restore recovers every source row",
+          "passed": true,
+          "expected": 750,
+          "actual": 750
+        },
+        {
+          "name": "restore preserves ordered history digest",
+          "passed": true,
+          "expected": "e236006e65b219b3779a26edeed9377b2ce19d5a1acbc3608647a67750bafb6c",
+          "actual": "e236006e65b219b3779a26edeed9377b2ce19d5a1acbc3608647a67750bafb6c"
+        },
+        {
+          "name": "backup manifest is checksummed",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        }
+      ],
+      "observations": {
+        "records": 750,
+        "segments": 3,
+        "compressedBytes": 23020,
+        "digest": "e236006e65b219b3779a26edeed9377b2ce19d5a1acbc3608647a67750bafb6c"
+      },
+      "notes": [
+        "Restore uses a separate empty store and verifies every compressed segment checksum."
+      ]
+    },
+    {
+      "id": "retention-concurrent-with-ingestion",
+      "passed": true,
+      "durationMs": 69.557,
+      "assertions": [
+        {
+          "name": "retention removes all expired rows",
+          "passed": true,
+          "expected": 500,
+          "actual": 500
+        },
+        {
+          "name": "bounded writer accepts the live batch",
+          "passed": true,
+          "expected": 500,
+          "actual": 500
+        },
+        {
+          "name": "concurrent live append commits fully",
+          "passed": true,
+          "expected": 500,
+          "actual": 500
+        },
+        {
+          "name": "live ingestion uses multiple storage batches",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "live rows remain queryable",
+          "passed": true,
+          "expected": 500,
+          "actual": 500
+        },
+        {
+          "name": "retention does not remove concurrent live rows",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "concurrent ingestion has no queue overflow",
+          "passed": true,
+          "expected": 0,
+          "actual": 0
+        },
+        {
+          "name": "concurrent persistence sustains the Phase 1 burst event rate",
+          "passed": true,
+          "expected": ">= 1200",
+          "actual": 15724.99
+        }
+      ],
+      "observations": {
+        "expiredRowsRemoved": 500,
+        "liveRowsCommitted": 500,
+        "ingestionBatches": 5,
+        "appendDurationMs": 31.797,
+        "ingestionRecordsPerSecond": 15724.99
+      },
+      "notes": [
+        "Retention and ingestion start in the same Promise.all; immutable segment leases protect each operation.",
+        "This is a short synthetic concurrency qualification, not a production-duration latency/throughput proof."
+      ]
+    },
+    {
+      "id": "one-hour-replay-startup",
+      "passed": true,
+      "durationMs": 615.535,
+      "assertions": [
+        {
+          "name": "one-hour replay startup is below three seconds",
+          "passed": true,
+          "expected": "< 3000",
+          "actual": 23.612
+        },
+        {
+          "name": "startup returns the requested first page",
+          "passed": true,
+          "expected": 512,
+          "actual": 512
+        },
+        {
+          "name": "startup authenticates a stable source checksum",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        }
+      ],
+      "observations": {
+        "startupMs": 23.612,
+        "datasetMarketDurationMs": 3600000,
+        "datasetRecords": 7201,
+        "firstPageRecords": 512
+      },
+      "notes": [
+        "Synthetic target dataset: one snapshot plus one depth delta and one trade per second for one market hour.",
+        "Timer includes catalog discovery, session creation, compressed checksum verification, and first-page decoding; fixture generation is excluded."
+      ]
+    },
+    {
+      "id": "speed-and-seek-invariant-replay-checksum",
+      "passed": true,
+      "durationMs": 2120.728,
+      "assertions": [
+        {
+          "name": "0.25x and 20x deliver the same frame count",
+          "passed": true,
+          "expected": 7201,
+          "actual": 7201
+        },
+        {
+          "name": "0.25x and 20x preserve frame order",
+          "passed": true,
+          "expected": "ac821fe77773492b4bff46daf66bdd4ca6e5a45b718e6be8c55f4bb7a171ac85",
+          "actual": "ac821fe77773492b4bff46daf66bdd4ca6e5a45b718e6be8c55f4bb7a171ac85"
+        },
+        {
+          "name": "0.25x and 20x produce one rolling checksum",
+          "passed": true,
+          "expected": "6e7303324cb43ca1743ef0a6f9420c182083e88c990339aa41ea858bc38c7804",
+          "actual": "6e7303324cb43ca1743ef0a6f9420c182083e88c990339aa41ea858bc38c7804"
+        },
+        {
+          "name": "0.25x and 20x produce one projected state checksum",
+          "passed": true,
+          "expected": "e3f57eef77674b2666b4fafde3eb8bbd66f3dfbf16e2c4e3ab69f858f2cd742e",
+          "actual": "e3f57eef77674b2666b4fafde3eb8bbd66f3dfbf16e2c4e3ab69f858f2cd742e"
+        },
+        {
+          "name": "0.25x and 20x produce one final book fingerprint",
+          "passed": true,
+          "expected": "7a80051c0d46740694b9c03977d3d1db5ced2b81b4d732247ab6e531f3059ea3",
+          "actual": "7a80051c0d46740694b9c03977d3d1db5ced2b81b4d732247ab6e531f3059ea3"
+        },
+        {
+          "name": "full replay completes",
+          "passed": true,
+          "expected": "completed",
+          "actual": "completed"
+        },
+        {
+          "name": "seek resets the replay checkpoint",
+          "passed": true,
+          "expected": 1735691400000,
+          "actual": 1735691400000
+        },
+        {
+          "name": "seek checksum is speed-invariant",
+          "passed": true,
+          "expected": "35a21121a477dd75e6c40d701c416d09d8d328a9fd4913477b9837124a462ae2",
+          "actual": "35a21121a477dd75e6c40d701c416d09d8d328a9fd4913477b9837124a462ae2"
+        },
+        {
+          "name": "seek frame order is speed-invariant",
+          "passed": true,
+          "expected": "eb62a00cffde29ed3db3ad0eaf7507bef72adf8ef091c597dd196f2e86685868",
+          "actual": "eb62a00cffde29ed3db3ad0eaf7507bef72adf8ef091c597dd196f2e86685868"
+        },
+        {
+          "name": "seek replay starts on/after its target",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        }
+      ],
+      "observations": {
+        "fullReplayFrames": 7201,
+        "seekReplayFrames": 3600,
+        "fullChecksum": "6e7303324cb43ca1743ef0a6f9420c182083e88c990339aa41ea858bc38c7804",
+        "fullStateChecksum": "e3f57eef77674b2666b4fafde3eb8bbd66f3dfbf16e2c4e3ab69f858f2cd742e",
+        "finalBookFingerprint": "7a80051c0d46740694b9c03977d3d1db5ced2b81b4d732247ab6e531f3059ea3",
+        "seekChecksum": "35a21121a477dd75e6c40d701c416d09d8d328a9fd4913477b9837124a462ae2",
+        "sourceChecksum": "d78f8b7a0b631e5a3e26234a6312616d2afb2eba3bfdfae3d47a50e645fad308"
+      },
+      "notes": [
+        "Playback speed changes scheduling only; rolling checksums consume stable source sequence and frame checksums."
+      ]
+    },
+    {
+      "id": "replay-session-checkpoint-restart",
+      "passed": true,
+      "durationMs": 595.528,
+      "assertions": [
+        {
+          "name": "one session is restored",
+          "passed": true,
+          "expected": 1,
+          "actual": 1
+        },
+        {
+          "name": "valid session is not discarded",
+          "passed": true,
+          "expected": 0,
+          "actual": 0
+        },
+        {
+          "name": "playing session restarts paused",
+          "passed": true,
+          "expected": "paused",
+          "actual": "paused"
+        },
+        {
+          "name": "checkpoint rolling checksum survives restart",
+          "passed": true,
+          "expected": "a56c0c6098f7034e05dabda23abfc0fb3b5022506e05ca0b8a96646cdca3b3cd",
+          "actual": "a56c0c6098f7034e05dabda23abfc0fb3b5022506e05ca0b8a96646cdca3b3cd"
+        },
+        {
+          "name": "checkpoint cursor survives restart",
+          "passed": true,
+          "expected": "0001735689600000:phase2-synthetic-hour:73853bace3c59abc:000000001000",
+          "actual": "0001735689600000:phase2-synthetic-hour:73853bace3c59abc:000000001000"
+        },
+        {
+          "name": "paused replay emits no frames",
+          "passed": true,
+          "expected": 0,
+          "actual": 0
+        },
+        {
+          "name": "seek changes checkpoint origin",
+          "passed": true,
+          "expected": 1735690500000,
+          "actual": 1735690500000
+        },
+        {
+          "name": "speed control persists",
+          "passed": true,
+          "expected": 12,
+          "actual": 12
+        },
+        {
+          "name": "resume changes lifecycle state",
+          "passed": true,
+          "expected": "playing",
+          "actual": "playing"
+        }
+      ],
+      "observations": {
+        "deliveredBeforeRestart": 1000,
+        "restoredPlayheadAt": 1735690500000,
+        "restoredChecksum": "a56c0c6098f7034e05dabda23abfc0fb3b5022506e05ca0b8a96646cdca3b3cd"
+      },
+      "notes": [
+        "A playing session intentionally restores paused because wall-clock anchors are process-local."
+      ]
+    }
+  ],
+  "summary": {
+    "passed": 7,
+    "failed": 0,
+    "allPassed": true
+  }
+}
