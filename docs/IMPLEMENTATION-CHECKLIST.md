@@ -1,6 +1,6 @@
 # Checklist Implementasi — LiquidMap vs development-plan.md
 
-Terakhir diperbarui: 25 Agustus 2026.
+Terakhir diperbarui: 25 Agustus 2026 (setelah pelaksanaan Fase 4).
 Tanda: `[x]` selesai · `[~]` sebagian/bersyarat · `[ ]` belum diimplementasikan.
 
 ---
@@ -69,47 +69,61 @@ Tanda: `[x]` selesai · `[~]` sebagian/bersyarat · `[ ]` belum diimplementasika
 - [ ] **Web Worker frontend** — item kondisional ("bila profiling membuktikan perlu"); profiling Fase 0 belum menunjukkan bottleneck main-thread pada dataset target, keputusan ditunda sampai pengukuran perangkat minimum
 - [ ] Verifikasi p95 event-to-screen < 150 ms & FPS ≥ 30 pada perangkat minimum fisik
 
-## Fase 4 — Multi-Symbol Beta (BELUM DIMULAI)
+## Fase 4 — Multi-Symbol Beta (`CONDITIONAL EXIT`)
 
-- [ ] Market-session manager (gateway saat ini single-symbol `MarketGateway.symbol`)
-- [ ] Metadata instrument + tick-size discovery
-- [ ] Dukung **ETHUSDT dan SOLUSDT** (frontend hardcode `SYMBOLS = { BTCUSDT }`)
-- [ ] Batas subscription per client
-- [ ] Watchlist
-- [ ] Pencarian simbol
-- [ ] Buffer terpisah per simbol
-- [ ] Cache snapshot + lifecycle subscription (hemat sumber daya saat tanpa client)
-- [ ] Test isolasi antarsimbol
-- [ ] Pengukuran biaya CPU/memori per simbol per client
-- [ ] Perpindahan simbol tanpa reload browser
+- [x] Market-session manager (`server/marketSessionManager.ts`: refcount, eviction TTL, capacity, `drain()`)
+- [x] Metadata instrument + tick-size registry (`server/instruments.ts`: BTC/ETH/SOL; discovery dinamis disiapkan via seam)
+- [x] Dukungan **BTCUSDT, ETHUSDT, SOLUSDT** (gateway lazily per simbol + `scopedHooks` metrik per-simbol)
+- [x] Batas subscription per client (`XBMAP_MAX_SUBSCRIPTIONS_PER_CLIENT`, default 3; error wire `SUBSCRIPTION_LIMIT`/`SESSION_CAPACITY`)
+- [x] Watchlist (`localStorage liquidmap.watchlist`, panel SymbolPicker)
+- [x] Pencarian simbol (input filter di picker)
+- [x] Buffer terpisah per simbol (gateway independen: book, aggregator, ring buffer, history `<root>/<symbol>/`)
+- [x] Cache snapshot + lifecycle subscription (snapshot rekonsiliasi dikirim pada setiap subscribe; eviction TTL + flush saat idle)
+- [x] Test isolasi antarsimbol (`server/__tests__/multiSymbol.test.ts`, 5 test; `useMarketData` switch test)
+- [x] Pengukuran biaya CPU/memori per simbol (`scripts/phase4/run.ts` → `docs/baselines/phase-4-validation.{json,md}`)
+- [x] Perpindahan simbol tanpa reload browser (picker → setSelection → resubscribe WS + clear buffer)
+- [x] REST multi-simbol: `/api/v1/markets`, `?symbol=` pada snapshot/history/settings, readiness agregat
+- [ ] **GATE:** Validasi performa 3 simbol live (jaringan Binance stabil) & FPS perangkat fisik minimum
+- [ ] **GATE:** Replay multi-simbol di UI (raw replay runtime masih satu simbol per katalog)
 
-## Fase 5 — Analytics Lanjutan dan Alert (BELUM DIMULAI)
+Detail pelaksanaan: [`phase-4/exit-report.md`](./phase-4/exit-report.md).
 
-### Analytics (hanya trend/CVD/volume-ratio/breakout yang sudah ada)
-- [ ] Liquidity wall persistence
-- [ ] Added/pulled liquidity
-- [ ] Absorption
-- [ ] Exhaustion
-- [ ] Rolling VWAP
-- [ ] Volume profile
-- [ ] Footprint sederhana
-- [ ] Funding rate + open interest
-- [ ] Liquidation feed (jika lisensi memungkinkan)
+
+## Fase 5 — Analytics Lanjutan dan Alert (`CONDITIONAL EXIT`)
+
+### Analytics
+- [x] Liquidity wall + persistence (`insightEngine.ts`: confirm ≥1,5s, transisi appeared/disappeared)
+- [x] Added/pulled liquidity (diffing book penuh antar-frame, jendela 10 detik)
+- [x] Absorption (flow berat 5s + mid ≤3 tick; arah dari delta dominan)
+- [x] Exhaustion (tren aktif kehilangan ≥30% trade rate)
+- [x] Rolling VWAP (jendela 60 detik)
+- [x] Volume profile + POC (jendela 5 menit, top-12 node)
+- [x] Footprint sederhana (buy/sell per level, ≤24 baris terbaru)
+- [x] Funding rate + open interest (`binanceDerivatives.ts`, poller fetch injektif, stale-aware)
+- [x] Liquidation feed live **opt-in** (`XBMAP_LIQUIDATIONS=1`): stream `!forceOrder@arr` (`binanceLiquidations.ts`, socket injektif) → agregat long/short 60 detik per simbol; gate lisensi/ToS tetap sebelum diaktifkan di produksi
 
 ### Alert
-- [ ] Alert produk user-configurable: trend score, liquidity wall, volume delta/velocity
-- [ ] Cooldown + deduplication
-- [ ] Browser notification + suara
-- [ ] Webhook + Telegram
-- [ ] Audit log alert (dibuat/dipicu/dikirim)
+- [x] Aturan user-configurable: trend score / liquidity wall muncul-hilang / volume delta / trade velocity (CRUD REST + UI drawer)
+- [x] Cooldown + deduplication (per rule×simbol, audit suppressed_cooldown)
+- [x] Browser notification + suara (WebAudio beep, toggle localStorage, badge bell)
+- [x] Webhook + Telegram (opsional via env, fetch injektif, audit delivered/delivery_failed)
+- [x] Audit log dibuat/dipicu/dikirim (`/api/v1/alerts/events`, bounded 500)
 
 ### Evaluasi sinyal
-- [ ] Horizon evaluasi 10s/30s/1m/5m
-- [ ] Metrik precision/recall/favorable/adverse excursion
-- [ ] Segmentasi hasil per simbol/volatilitas/jam
-- [ ] Versioning formula/parameter per sinyal
-- [ ] Mode shadow sebelum alert stabil
-- [ ] Threshold baseline per simbol (bukan universal)
+- [x] Horizon 10s/30s/1m/5m (`SIGNAL_HORIZONS_MS`)
+- [x] Precision + favorable/adverse excursion (MFE/MAE) per horizon
+- [x] Segmentasi simbol / jam UTC / bucket volatilitas
+- [x] Versioning algoritma pada setiap sinyal (`alerts-v1`)
+- [x] Mode shadow (`XBMAP_ALERT_SHADOW=1`)
+- [x] Threshold baseline per simbol (median berjalan ×multiplier, min 30 sampel)
+
+### Verifikasi
+- [x] Test: `marketInsights.test.ts` (7), `alertEngine.test.ts` (5), `phase5Surface.test.ts` (3) — WS insight/alert end-to-end + CRUD
+- [x] `npm run phase5:validate` → 3/3 PASS (determinism, cooldown/shadow, horizons) → `docs/baselines/phase-5-validation.{json,md}`
+- [ ] **GATE:** Kalibrasi multiplier baseline dengan data Binance live (jalankan shadow mode dulu di produksi)
+- [ ] **GATE:** Uji delivery webhook/Telegram dengan penyedia nyata
+
+Detail pelaksanaan: [`phase-5/exit-report.md`](./phase-5/exit-report.md).
 
 ## Fase 6 — Product Beta (BELUM DIMULAI)
 
@@ -155,6 +169,6 @@ Tanda: `[x]` selesai · `[~]` sebagian/bersyarat · `[ ]` belum diimplementasika
 ## Urutan Pengerjaan yang Disarankan
 
 1. Tutup gate fase 3 (load test multi-client, soak 24 jam, Grafana) — prasyarat sebelum multi-symbol.
-2. Kerjakan fase 4 (market-session manager → 3 simbol → watchlist).
+2. ~~Kerjakan fase 4 (market-session manager → 3 simbol → watchlist).~~ **Selesai 25 Agustus 2026** dengan `CONDITIONAL EXIT`; gate performa live/perangkat fisik tetap terbuka.
 3. Paralel: aktifkan adapter Postgres/ClickHouse runtime (gate fase 2) karena fase 4 menaikkan volume data 3×.
 4. Baru fase 5 (analytics/alert) — jangan dimulai sebelum fase 1–3 lulus release gate sesuai prinsip prioritas dokumen.

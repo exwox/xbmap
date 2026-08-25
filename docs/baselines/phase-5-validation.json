@@ -1,0 +1,190 @@
+{
+  "validationSchemaVersion": 1,
+  "kind": "phase-5-deployment-validation",
+  "deterministicInputs": true,
+  "generatedAt": "2026-08-25T11:57:12.053Z",
+  "cases": [
+    {
+      "id": "insights-determinism",
+      "passed": true,
+      "durationMs": 20,
+      "assertions": [
+        {
+          "name": "identical frames across runs (algo insights-v1)",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        }
+      ],
+      "observations": {
+        "frameBytes": 930
+      },
+      "notes": [
+        "satisfies 'evaluasi dapat direproduksi dari replay' at the analytics layer"
+      ]
+    },
+    {
+      "id": "alert-cooldown-shadow",
+      "passed": true,
+      "durationMs": 2,
+      "assertions": [
+        {
+          "name": "live trigger delivered once",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "repeat within cooldown suppressed",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "cooldown audit recorded",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "shadow trigger withheld",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "shadow still evaluated signals",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        }
+      ],
+      "observations": {
+        "algoVersion": "alerts-v1",
+        "horizonsMs": [
+          10000,
+          30000,
+          60000,
+          300000
+        ]
+      },
+      "notes": [
+        "no repeated alerts without cooldown; shadow keeps evaluation but withholds delivery"
+      ]
+    },
+    {
+      "id": "signal-horizons",
+      "passed": true,
+      "durationMs": 1,
+      "assertions": [
+        {
+          "name": "10s horizon resolved favorably",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "30s horizon resolved",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "1m horizon resolved",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "5m horizon resolved",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "excursions recorded",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        }
+      ],
+      "observations": {
+        "rows": [
+          {
+            "horizonMs": 10000,
+            "resolved": 1,
+            "precision": 1,
+            "mfeBps": 500,
+            "hourUtc": 0,
+            "volBucket": "low"
+          },
+          {
+            "horizonMs": 10000,
+            "resolved": 1,
+            "precision": 1,
+            "mfeBps": 500,
+            "hourUtc": 0,
+            "volBucket": "low"
+          },
+          {
+            "horizonMs": 30000,
+            "resolved": 1,
+            "precision": 1,
+            "mfeBps": 500,
+            "hourUtc": 0,
+            "volBucket": "low"
+          },
+          {
+            "horizonMs": 30000,
+            "resolved": 1,
+            "precision": 1,
+            "mfeBps": 500,
+            "hourUtc": 0,
+            "volBucket": "low"
+          },
+          {
+            "horizonMs": 60000,
+            "resolved": 1,
+            "precision": 1,
+            "mfeBps": 500,
+            "hourUtc": 0,
+            "volBucket": "low"
+          },
+          {
+            "horizonMs": 60000,
+            "resolved": 1,
+            "precision": 1,
+            "mfeBps": 500,
+            "hourUtc": 0,
+            "volBucket": "low"
+          },
+          {
+            "horizonMs": 300000,
+            "resolved": 1,
+            "precision": 1,
+            "mfeBps": 500,
+            "hourUtc": 0,
+            "volBucket": "low"
+          },
+          {
+            "horizonMs": 300000,
+            "resolved": 1,
+            "precision": 1,
+            "mfeBps": 500,
+            "hourUtc": 0,
+            "volBucket": "low"
+          }
+        ]
+      },
+      "notes": [
+        "precision/recall/MFE/MAE segmented per simbol, jam UTC, dan bucket volatilitas"
+      ]
+    }
+  ],
+  "summary": {
+    "passed": 3,
+    "failed": 0,
+    "allPassed": true,
+    "durationMs": 24
+  }
+}

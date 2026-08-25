@@ -1,11 +1,16 @@
 # LiquidMap
 
-LiquidMap adalah MVP terminal order-flow real-time ala Bookmap untuk BTCUSDT perpetual. Aplikasi menampilkan histori likuiditas sebagai heatmap, transaksi agresif sebagai bubble, price path, volume delta, CVD, order-book imbalance, trade velocity, serta skor tren yang dapat dijelaskan.
+LiquidMap adalah MVP terminal order-flow real-time ala Bookmap untuk pasar perpetual Binance USD-M. Aplikasi menampilkan histori likuiditas sebagai heatmap, transaksi agresif sebagai bubble, price path, volume delta, CVD, order-book imbalance, trade velocity, serta skor tren yang dapat dijelaskan.
 
 > Aplikasi ini adalah alat bantu analisis dan bukan nasihat keuangan. MVP bersifat read-only dan tidak menerima API key atau mengeksekusi order.
 
 ## Fitur yang sudah tersedia
 
+- Multi-simbol beta: BTCUSDT, ETHUSDT, dan SOLUSDT perpetual berjalan bersamaan dengan sesi terisolasi per simbol.
+- Symbol picker dengan pencarian dan watchlist persisten; pergantian simbol tanpa reload browser.
+- Market-session manager: sesi dibuat saat dibutuhkan dan dihentikan otomatis (TTL idle) agar tidak ada feed menggantung tanpa penonton.
+- Analytics lanjutan per simbol: rolling VWAP, liquidity wall + persistensi, added/pulled liquidity, absorption, exhaustion, volume profile dengan POC, footprint buy/sell, funding rate & open interest, agregat likuidasi.
+- Alert user-configurable (trend score, wall muncul/hilang, volume delta, trade velocity) dengan cooldown, baseline threshold per simbol, mode shadow, audit log, notifikasi browser + suara, serta webhook/Telegram opsional.
 - Sinkronisasi snapshot + incremental depth Binance USD-M Futures.
 - Validasi sequence `U/u/pu`, counter anomaly, fingerprint book, dan resync atomik.
 - Reconnect WebSocket dengan exponential backoff.
@@ -168,7 +173,9 @@ WebSocket tersedia pada `/ws`. Pesan subscribe minimum:
 }
 ```
 
-Gateway mengirim event versioned `snapshot`, `depth_frame`, `trade_bucket`, `price`, `metric`, `trend_signal`, `status`, dan `heartbeat`.
+Gateway mengirim event versioned `snapshot`, `depth_frame`, `trade_bucket`, `price`, `metric`, `trend_signal`, `status`, `heartbeat`, `insight` (analytics lanjutan 1×/detik), dan `alert`. Setiap event membawa field `symbol`; koneksi hanya menerima frame dari simbol yang disubscribe. Simbol yang didukung saat ini: `BTCUSDT`, `ETHUSDT`, `SOLUSDT`.
+
+Contoh REST per simbol: `GET /api/v1/markets` (registry instrumen + status sesi), `GET /api/v1/snapshot?symbol=ETHUSDT` (409 `SYMBOL_NOT_ACTIVE` bila belum ada klien yang subscribe). Permukaan alert: `GET|POST /api/v1/alerts/rules`, `PATCH|DELETE /api/v1/alerts/rules/:id`, `GET /api/v1/alerts/events` (audit), `GET /api/v1/signals/performance` (precision/excursion per horizon 10s–5m), dan `GET /api/v1/insights?symbol=`.
 
 ## Konfigurasi
 
@@ -179,13 +186,23 @@ Gateway mengirim event versioned `snapshot`, `depth_frame`, `trade_bucket`, `pri
 | `XBMAP_DEMO` | `0` | Paksa simulator jika bernilai `1` |
 | `CORS_ORIGIN` | kosong | Daftar origin yang diizinkan, dipisahkan koma |
 | `NODE_ENV` | kosong | Gunakan `production` untuk cache static asset |
+| `XBMAP_MAX_SESSIONS` | `8` | Batas sesi pasar simultan |
+| `XBMAP_SESSION_IDLE_TTL_MS` | `300000` | Usia idle sebelum sesi tanpa klien dihentikan |
+| `XBMAP_MAX_SUBSCRIPTIONS_PER_CLIENT` | `3` | Batas simbol yang bisa disubscribe satu koneksi WS |
+| `XBMAP_ALERT_RULES_FILE` | kosong | File JSON aturan alert (persisten antar restart) |
+| `XBMAP_ALERT_SHADOW` | `0` | `1` = evaluasi alert tanpa mengirim notifikasi |
+| `XBMAP_ALERT_WEBHOOK_URL` | kosong | Endpoint POST untuk alert terpicu |
+| `XBMAP_TELEGRAM_BOT_TOKEN` | kosong | Token bot Telegram (bersama chat id) |
+| `XBMAP_TELEGRAM_CHAT_ID` | kosong | Chat tujuan pengiriman alert |
+| `XBMAP_DERIVATIVES_POLL_MS` | `30000` | Interval polling funding/open interest |
+| `XBMAP_LIQUIDATIONS` | `0` | `1` = aktifkan feed likuidasi (review lisensi dulu) |
 | `XBMAP_CAPTURE_DIR` | kosong/nonaktif | Direktori privat untuk raw public-feed capture gzip |
 | `XBMAP_CAPTURE_QUEUE_RECORDS` | `8192` | Batas jumlah record yang menunggu ditulis |
 | `XBMAP_CAPTURE_QUEUE_BYTES` | `16777216` | Batas byte antrean recorder |
 | `XBMAP_CAPTURE_MAX_BYTES` | `536870912` | Batas raw byte per sesi capture |
 | `XBMAP_CAPTURE_MAX_DURATION_MS` | `86400000` | Durasi maksimum satu sesi capture (maks. 24 jam) |
 | `XBMAP_CAPTURE_RETENTION_MS` | `86400000` | Retensi capture lokal (maks. 24 jam) |
-| `XBMAP_HISTORY_DIR` | kosong/nonaktif | Direktori projection history persisten; Compose mengaktifkannya |
+| `XBMAP_HISTORY_DIR` | kosong/nonaktif | Direktori projection history persisten (subdirektori per simbol); Compose mengaktifkannya |
 | `XBMAP_HISTORY_QUEUE_RECORDS` | `20000` | Batas record antrean persistence non-blocking |
 | `XBMAP_HISTORY_QUERY_MAX_POINTS` | `10000` | Batas point satu response history/replay |
 | `XBMAP_HISTORY_QUERY_MAX_RANGE_MS` | `86400000` | Batas rentang satu query |
@@ -224,11 +241,14 @@ Dokumen rancangan produk berada di [plan.md](./plan.md). Roadmap implementasi se
 
 ## Batasan MVP
 
-- Hanya BTCUSDT perpetual yang didukung gateway produksi saat ini.
-- Gateway hanya memakai adapter file persisten; adapter runtime ClickHouse/PostgreSQL
-  produksi belum diaktifkan walaupun schema migration dan Compose profile tersedia.
-- Tombol Replay UI masih memakai dataset lokal lengkap untuk demonstrasi heatmap;
-  raw replay persisten tersedia melalui REST API audit dan belum menjadi pemilih
-  dataset historis di UI.
+- Multi-simbol beta mencakup tiga simbol perpetual (BTCUSDT, ETHUSDT, SOLUSDT);
+  penambahan simbol baru memerlukan entri registry instrumen.
+- Validasi performa tiga stream live pada jaringan Binance produksi dan uji FPS
+  perangkat fisik minimum masih menjadi gate terbuka Fase 4
+  ([laporan exit](./docs/phase-4/exit-report.md)).
+- Raw replay masih satu simbol per katalog; pemilihan dataset historis
+  multi-simbol di UI belum tersedia.
+- Gateway hanya memakai adapter file persisten untuk development/default Compose;
+  adapter runtime ClickHouse/PostgreSQL produksi dapat diaktifkan via env.
 - Sinyal menggunakan aturan yang dapat dijelaskan, bukan prediksi profit.
 - Eksekusi order, akun pengguna, dan penyimpanan API key belum tersedia.

@@ -1,0 +1,175 @@
+{
+  "validationSchemaVersion": 1,
+  "kind": "phase-4-deployment-validation",
+  "deterministicInputs": true,
+  "generatedAt": "2026-08-25T06:06:41.153Z",
+  "cases": [
+    {
+      "id": "session-lifecycle",
+      "passed": true,
+      "durationMs": 646.657,
+      "assertions": [
+        {
+          "name": "distinct gateway instances",
+          "passed": true,
+          "expected": 3,
+          "actual": 3
+        },
+        {
+          "name": "BTC tick size",
+          "passed": true,
+          "expected": 0.1,
+          "actual": 0.1
+        },
+        {
+          "name": "ETH tick size",
+          "passed": true,
+          "expected": 0.01,
+          "actual": 0.01
+        },
+        {
+          "name": "SOL tick size",
+          "passed": true,
+          "expected": 0.01,
+          "actual": 0.01
+        },
+        {
+          "name": "unique market session ids",
+          "passed": true,
+          "expected": 3,
+          "actual": 3
+        },
+        {
+          "name": "idle sessions evicted after ttl",
+          "passed": true,
+          "expected": 0,
+          "actual": 0
+        },
+        {
+          "name": "rebuild produces a fresh instance",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        }
+      ],
+      "observations": {},
+      "notes": [
+        "evicted=all"
+      ]
+    },
+    {
+      "id": "resource-budget-3-symbols",
+      "passed": true,
+      "durationMs": 1978.893,
+      "assertions": [
+        {
+          "name": "all sessions running",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "every session produced events",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "no crossed books",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        }
+      ],
+      "observations": {
+        "sampleMs": 1500,
+        "symbols": [
+          {
+            "symbol": "BTCUSDT",
+            "tickSize": 0.1,
+            "running": true,
+            "lastEventTimestamp": 1787638000381,
+            "resyncs": 0,
+            "crossedBooks": 0
+          },
+          {
+            "symbol": "ETHUSDT",
+            "tickSize": 0.01,
+            "running": true,
+            "lastEventTimestamp": 1787638000418,
+            "resyncs": 0,
+            "crossedBooks": 0
+          },
+          {
+            "symbol": "SOLUSDT",
+            "tickSize": 0.01,
+            "running": true,
+            "lastEventTimestamp": 1787638000330,
+            "resyncs": 0,
+            "crossedBooks": 0
+          }
+        ],
+        "process": {
+          "rssDeltaBytes": 131072,
+          "rssBytes": 93769728,
+          "cpuMs": 300.4,
+          "cpuMsPerSymbolPerSecond": 66.75
+        }
+      },
+      "notes": [
+        "synthetic demo feeds; production budgets require the live-network gate"
+      ]
+    },
+    {
+      "id": "book-isolation",
+      "passed": true,
+      "durationMs": 723.618,
+      "assertions": [
+        {
+          "name": "btc session running",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "eth session running",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "both books expose checkpoints",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "tick sizes differ across books",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "snapshots are tagged with their own market",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        }
+      ],
+      "observations": {
+        "btcTickSize": 0.1,
+        "ethTickSize": 0.01,
+        "registryEthTick": 0.01
+      },
+      "notes": [
+        "isolation enforced by per-symbol gateway instances with independent order books"
+      ]
+    }
+  ],
+  "summary": {
+    "passed": 3,
+    "failed": 0,
+    "allPassed": true,
+    "durationMs": 3351
+  }
+}
