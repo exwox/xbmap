@@ -14,6 +14,13 @@ export interface DemoFeedOptions {
   seed?: number;
 }
 
+/** Approximate spot anchors so the demo book mirrors each asset's scale. */
+const DEMO_BASE_PRICES: Record<string, number> = {
+  BTCUSDT: 64_000,
+  ETHUSDT: 3_150,
+  SOLUSDT: 148,
+};
+
 /** Realistic, bounded synthetic source used automatically when Binance is unavailable. */
 export class DemoFeed extends EventEmitter {
   private readonly random: SeededRandom;
@@ -35,7 +42,12 @@ export class DemoFeed extends EventEmitter {
     super();
     this.symbol = options.symbol.toUpperCase();
     this.tickSize = options.tickSize;
-    this.mid = options.initialPrice ?? 64_000;
+    // Realistic per-instrument base prices keep the local simulator visually
+    // comparable to the live market instead of pinning every asset to BTC's
+    // scale.
+    this.mid = options.initialPrice
+      ?? DEMO_BASE_PRICES[this.symbol]
+      ?? 100;
     this.random = new SeededRandom(options.seed ?? 0x58424d41);
   }
 
