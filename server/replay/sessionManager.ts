@@ -45,6 +45,11 @@ export interface CreateReplaySessionOptions extends ReplayRange {
 export interface ReplayReadOptions {
   limit?: number;
   now?: number;
+  /**
+   * Raw-book sources only: open the first page after a seek with the nearest
+   * snapshot plus following depth deltas so the client rebuilds the full book.
+   */
+  preRoll?: boolean;
 }
 
 export interface ReplayReadResult<T> {
@@ -255,6 +260,7 @@ export class ReplaySessionManager<T> {
         after: session.checkpoint.cursor,
         through: session.playheadAt,
         limit: clampInteger(options.limit ?? this.maxReadFrames, 1, this.maxReadFrames),
+        includePreRoll: options.preRoll === true && session.checkpoint.cursor === null,
       });
       if (page.sourceChecksum !== session.checkpoint.sourceChecksum) {
         throw new Error("Replay source checksum changed during the session");

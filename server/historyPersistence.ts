@@ -9,11 +9,14 @@ import {
   HISTORY_RESOLUTIONS_MS,
   HISTORY_SCHEMA_VERSION,
   canonicalQuantity,
+  clickHouseHistoryStoreFromEnvironment,
   type BackupResult,
   type BatchedHistoryWriterStats,
   type HistoryCursor,
   type HistoryResolutionMs,
   type HistoryRetentionPolicy,
+  type HistoryStore,
+  type MaintenanceCheckpointStore,
   type RetentionResult,
   type StoredDepthDelta,
   type StoredDepthSnapshot,
@@ -32,9 +35,12 @@ import type {
 } from "./types.js";
 
 export interface HistoryPersistenceOptions {
-  directory: string;
+  /** File backend root; required unless a `store` is injected. */
+  directory?: string;
   symbol: string;
   tickSize: number;
+  /** Injected backend (e.g. ClickHouse); defaults to the file adapter. */
+  store?: HistoryStore & MaintenanceCheckpointStore;
   queueRecords?: number;
   queueBytes?: number;
   batchRecords?: number;
@@ -92,7 +98,7 @@ interface CaptureBounds {
  * compression, rollups, retention, and backups execute asynchronously.
  */
 export class HistoryPersistence {
-  readonly store: FileHistoryStore;
+  readonly store: HistoryStore & MaintenanceCheckpointStore;
   readonly writer: BatchedHistoryWriter;
   readonly symbol: string;
   readonly tickSize: number;
@@ -127,8 +133,10 @@ export class HistoryPersistence {
     this.symbol = options.symbol.toUpperCase();
     this.tickSize = options.tickSize;
     this.now = options.now ?? Date.now;
-    this.store = new FileHistoryStore({
-      directory: options.directory,
+    // Backend injection keeps ingestion/replay call sites unchanged while
+    // letting XBMAP_HISTORY_BACKEND select a production store.
+    this.store = options.store ?? new FileHistoryStore({
+      directory: options.directory ?? "",
       maxBatchRecords: options.segmentRecords,
       maxBatchBytes: options.segmentBytes,
       now: this.now,
@@ -454,11 +462,8 @@ export async function historyPersistenceFromEnvironment(
   tickSize: number,
   environment: NodeJS.ProcessEnv = process.env,
 ): Promise<HistoryPersistence | null> {
-  const directory = environment.XBMAP_HISTORY_DIR?.trim();
-  if (!directory) return null;
   const queryMaxRows = envInteger(environment.XBMAP_HISTORY_QUERY_MAX_POINTS, 10_000);
-  return HistoryPersistence.open({
-    directory,
+  const commonOptions = {
     symbol,
     tickSize,
     queueRecords: envInteger(environment.XBMAP_HISTORY_QUEUE_RECORDS, 20_000),
@@ -475,7 +480,20 @@ export async function historyPersistenceFromEnvironment(
     backupIntervalMs: envInteger(environment.XBMAP_HISTORY_BACKUP_INTERVAL_MS, 24 * 60 * 60_000),
     backupKeep: envInteger(environment.XBMAP_HISTORY_BACKUP_KEEP, 7),
     retentionPolicy: retentionFromEnvironment(environment),
-  });
+  };
+
+  const backend = (environment.XBMAP_HISTORY_BACKEND ?? "").trim().toLowerCase();
+  if (backend === "" || backend === "file") {
+    const directory = environment.XBMAP_HISTORY_DIR?.trim();
+    if (!directory) return null;
+    return HistoryPersistence.open({ ...commonOptions, directory });
+  }
+  if (backend === "clickhouse") {
+    const store = clickHouseHistoryStoreFromEnvironment(environment);
+    if (!store) throw new TypeError("XBMAP_HISTORY_BACKEND=clickhouse requires ClickHouse configuration");
+    return HistoryPersistence.open({ ...commonOptions, store });
+  }
+  throw new TypeError(`Unsupported XBMAP_HISTORY_BACKEND: ${backend}`);
 }
 
 export function nearestHistoryResolution(value: number): HistoryResolutionMs {

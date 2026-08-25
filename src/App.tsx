@@ -15,6 +15,7 @@ import {
 } from './components/SettingsPanel';
 import { TrendPanel } from './components/TrendPanel';
 import { createDemoReplay } from './demoReplay';
+import { fetchReplayCapture } from './lib/replayApi';
 import {
   assessDataQuality,
   formatCompactNumber,
@@ -235,7 +236,19 @@ function App() {
 
   const selectMode = useCallback((mode: UiMode) => {
     if (mode === 'replay') {
-      market.replayControls.load(createDemoReplay(), { autoplay: true });
+      // Prefer the durable raw capture from the gateway; fall back to the
+      // synthetic demo dataset when raw replay is disabled or still empty so
+      // the heatmap never renders an empty historical view.
+      void fetchReplayCapture()
+        .then((capture) => {
+          if (capture.events.length === 0) throw new Error('capture kosong');
+          market.replayControls.load(capture.events, { autoplay: true });
+          setToast(`Replay historis dimuat (${capture.events.length} event dari capture gateway).`);
+        })
+        .catch(() => {
+          market.replayControls.load(createDemoReplay(), { autoplay: true });
+          setToast('Capture historis belum tersedia; memuat replay demo sintetis.');
+        });
       return;
     }
     market.replayControls.goLive();

@@ -21,6 +21,8 @@ export interface ReplaySourceFrame<T> {
   timestamp: number;
   checksum: string;
   data: T;
+  /** True when the frame predates the seek watermark and only anchors book state. */
+  preroll?: boolean;
 }
 
 export interface ReplaySourceQuery extends ReplayRange {
@@ -30,6 +32,14 @@ export interface ReplaySourceQuery extends ReplayRange {
   startAt?: number;
   /** Optional playback watermark; it never changes source ordering. */
   through?: number;
+  /**
+   * When set on a fresh read (`after` empty), the page opens with the nearest
+   * depth snapshot at or before `startAt` plus its subsequent depth deltas so a
+   * seeking client can reconstruct the full book before live frames arrive.
+   */
+  includePreRoll?: boolean;
+  /** Upper bound on retained pre-roll depth envelopes; overflow drops the run. */
+  maxPreRollRecords?: number;
 }
 
 export interface ReplaySourcePage<T> {
@@ -84,6 +94,42 @@ export class RawCaptureReplaySource implements ReplayFrameSource<RawCaptureEnvel
     const frames: ReplaySourceFrame<RawCaptureEnvelope>[] = [];
     let cursorReached = after === null;
 
+    // Seek pre-roll: retain the newest snapshot at or before `startAt` plus the
+    // depth deltas that follow it. Trades never pre-roll; they are point events.
+    const collectPreroll = query.includePreRoll === true && after === null;
+    const maxPreRoll = clampInteger(query.maxPreRollRecords ?? 20_000, 0, 100_000);
+    let prerollAnchor: ReplaySourceFrame<RawCaptureEnvelope> | null = null;
+    let prerollPending: ReplaySourceFrame<RawCaptureEnvelope>[] = [];
+    let prerollEmitted = false;
+    let prerollDropped = 0;
+    const rememberPreroll = (frame: ReplaySourceFrame<RawCaptureEnvelope>): void => {
+      if (!collectPreroll) return;
+      if (frame.data.stream === "snapshot") {
+        prerollAnchor = frame;
+        prerollPending = [];
+        prerollDropped = 0;
+        prerollEmitted = false;
+        return;
+      }
+      if (prerollAnchor === null || frame.data.stream !== "depth") return;
+      if (prerollPending.length >= maxPreRoll) {
+        prerollDropped += 1;
+        return;
+      }
+      prerollPending.push(frame);
+    };
+    const drainPreroll = (): void => {
+      if (!collectPreroll || prerollEmitted || prerollAnchor === null) return;
+      const budget = Math.max(0, limit - frames.length);
+      const run = [prerollAnchor, ...prerollPending].map(
+        (frame) => ({ ...frame, preroll: true }),
+      );
+      const take = run.slice(0, budget);
+      prerollDropped += run.length - take.length > 0 ? run.length - take.length : 0;
+      frames.push(...take);
+      prerollEmitted = true;
+    };
+
     const catalogQuery: CaptureCatalogQuery = range;
     for (const segment of this.catalog.list(catalogQuery)) {
       const segmentKey = captureSegmentKey(segment.startedAt, segment.captureId, basename(segment.dataPath));
@@ -96,11 +142,20 @@ export class RawCaptureReplaySource implements ReplayFrameSource<RawCaptureEnvel
           if (sequence === after) cursorReached = true;
           continue;
         }
-        if (envelope.capturedAt < startAt) continue;
+        if (envelope.capturedAt < startAt) {
+          rememberPreroll({
+            sequence,
+            timestamp: envelope.capturedAt,
+            checksum: envelopeChecksum(envelope),
+            data: envelope,
+          });
+          continue;
+        }
         if (envelope.capturedAt > through) {
           // Before the final watermark, never skip a future event and advance
           // the cursor past it. This preserves capture order under clock drift.
           if (through < range.to) {
+            drainPreroll();
             return {
               frames,
               hasMore: true,
@@ -109,6 +164,7 @@ export class RawCaptureReplaySource implements ReplayFrameSource<RawCaptureEnvel
           }
           continue;
         }
+        drainPreroll();
         frames.push({
           sequence,
           timestamp: envelope.capturedAt,
@@ -126,9 +182,10 @@ export class RawCaptureReplaySource implements ReplayFrameSource<RawCaptureEnvel
     }
 
     if (!cursorReached) throw new Error("Replay cursor no longer exists in the capture catalog");
+    drainPreroll();
     return {
       frames,
-      hasMore: false,
+      hasMore: prerollDropped > 0,
       sourceChecksum: this.catalog.checksum(range),
     };
   }

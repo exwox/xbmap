@@ -410,6 +410,9 @@ export function createMarketHttpServer(
     try {
       const result = await rawReplay.manager.read(request.params.id, {
         limit: parseBoundedInteger(request.query.limit, 1_000, 1, 5_000),
+        // Full-book delivery: after a seek the first page opens with the
+        // anchoring snapshot plus its depth deltas (flagged `preroll: true`).
+        preRoll: true,
       });
       response.json({ schemaVersion: SCHEMA_VERSION, result: rawReplay.safeRead(result) });
     } catch (error) {

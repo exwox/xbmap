@@ -30,6 +30,8 @@ export interface SafeRawReplayFrame {
   captureSequence: number;
   stream: RawCaptureEnvelope["stream"];
   connectionId: string;
+  /** Frame predates the seek watermark; used to rebuild the full book. */
+  preroll: boolean;
 }
 
 export class RawReplayValidationError extends Error {
@@ -168,6 +170,7 @@ export class RawReplayRuntime {
         captureSequence: frame.data.captureSequence,
         stream: frame.data.stream,
         connectionId: frame.data.connectionId,
+        preroll: frame.preroll === true,
       })),
     };
   }

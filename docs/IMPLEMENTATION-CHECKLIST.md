@@ -40,12 +40,12 @@ Tanda: `[x]` selesai · `[~]` sebagian/bersyarat · `[ ]` belum diimplementasika
 - [x] Raw replay ber-checksum + session pause/seek/speed persisten (REST)
 - [x] Batas query (range/row/segment/byte) + pagination cursor
 - [x] Migrasi SQL Postgres/ClickHouse tersedia (`migrations/`)
-- [ ] **Adapter runtime PostgreSQL** — gateway masih tulis ke FileHistoryStore; compose profile `storage` siap tapi tidak dipakai runtime
-- [ ] **Adapter runtime ClickHouse** untuk trade/depth time-series
-- [ ] **Object storage adapter** untuk raw capture terkompresi
-- [ ] **Seek full-book pre-roll** dari snapshot valid (saat ini raw audit delivery saja)
-- [ ] **Historical depth heatmap di UI** — UI masih muat `createDemoReplay()` sintetis (`src/App.tsx:238`), client `fetchReplayCapture` sudah ada tapi belum dipakai heatmap
-- [ ] **GATE:** SLO replay-start < 3 detik di deployment target nyata
+- [x] **Adapter runtime ClickHouse** untuk trade/depth time-series — `server/storage/clickHouseHistoryStore.ts` (HTTP JSONEachRow, fetch injektif; append/query/retention/backup/restore/checkpoint; 7 test) · aktif via `XBMAP_HISTORY_BACKEND=clickhouse`
+- [x] **Adapter runtime PostgreSQL** (metadata sesi replay) — `server/storage/postgresReplaySessions.ts` mengikuti migrasi `0001_replay_metadata.sql` (PoolLike injektif; 5 test); produksi: `new Pool()` + env `XBMAP_PG_*`
+- [ ] **Object storage adapter** untuk raw capture terkompresi (kontrak `RawCaptureObjectStore` sudah ada di `storage/types.ts`; implementasi S3/MinIO butuh SigV4 + instance MinIO live untuk verifikasi)
+- [x] **Seek full-book pre-roll** dari snapshot valid — `RawCaptureReplaySource.page({includePreRoll})` mengirim snapshot anchor + delta depth bertanda `preroll:true`; endpoint frames HTTP selalu pre-roll; 2 test baru (`seekPreRoll.test.ts`)
+- [x] **Historical depth heatmap di UI** — `App.tsx selectMode('replay')` memuat `fetchReplayCapture()` dari gateway; fallback demo sintetis hanya bila raw replay disabled/kosong
+- [ ] **GATE:** SLO replay-start < 3 detik pada deployment target nyata (validator sintetis lulus 23,7 ms; gate tetap terbuka)
 
 ## Fase 3 — Performance dan Observability
 
