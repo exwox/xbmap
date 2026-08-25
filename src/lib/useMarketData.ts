@@ -4,8 +4,10 @@ import {
   DEFAULT_MARKET_SELECTION,
   EMPTY_STATUS,
   MARKET_SCHEMA_VERSION,
+  type AlertNotification,
   type DataSourceMode,
   type DepthFrame,
+  type InsightFrame,
   type MarketDataEvent,
   type MarketSelection,
   type MetricFrame,
@@ -64,6 +66,10 @@ export interface MarketDataState {
   connected: boolean;
   isStale: boolean;
   lastEventAt: number | null;
+  /** Latest Phase 5 analytics pack for the current symbol. */
+  insight: InsightFrame | null;
+  /** Most recent triggered alerts (newest first, bounded). */
+  alertsFeed: AlertNotification[];
 }
 
 export interface MarketReplayControls {
@@ -168,6 +174,8 @@ export function useMarketData(options: UseMarketDataOptions = {}): UseMarketData
     connected: false,
     isStale: true,
     lastEventAt: null,
+    insight: null,
+    alertsFeed: [],
   });
 
   const capacities = useMemo<MarketBufferCapacities>(
@@ -209,6 +217,8 @@ export function useMarketData(options: UseMarketDataOptions = {}): UseMarketData
       metrics: null,
       trend: null,
       lastEventAt: null,
+      insight: null,
+      alertsFeed: [],
     }));
   }, [buffers]);
 
@@ -262,6 +272,14 @@ export function useMarketData(options: UseMarketDataOptions = {}): UseMarketData
               trend: signalAllowed ? marketEvent : null,
             };
           }
+          case 'insight':
+            // Phase 5 analytics pack: replace the latest snapshot wholesale.
+            return { ...current, ...common, insight: marketEvent as InsightFrame };
+          case 'alert':
+            return {
+              ...current,
+              alertsFeed: [marketEvent as AlertNotification, ...current.alertsFeed].slice(0, 30),
+            };
           case 'status': {
             const valid = replayActiveRef.current
               ? !marketEvent.stale
@@ -475,11 +493,13 @@ export function useMarketData(options: UseMarketDataOptions = {}): UseMarketData
   );
 
   const setSelection = useCallback((next: MarketSelection | Partial<MarketSelection>) => {
-    updateSelection((current) => {
-      const merged = mergeSelection({ ...current, ...next });
-      return selectionEquals(current, merged) ? current : merged;
-    });
-  }, []);
+    const merged = mergeSelection({ ...selection, ...next });
+    if (selectionEquals(selection, merged)) return;
+    // Phase 4: switching markets must never render frames from the previous
+    // symbol; drop buffered state so the chart restarts from the new stream.
+    if (selection.symbol !== merged.symbol) clear();
+    updateSelection(merged);
+  }, [clear, selection]);
 
   const requestSnapshot = useCallback(() => {
     sourceRef.current?.requestSnapshot();

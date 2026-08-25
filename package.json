@@ -29,6 +29,12 @@
     "phase3:loadtest": "node --import tsx scripts/phase3/load-test.ts --clients 25 --duration 20",
     "phase3:soak24": "node --expose-gc --import tsx scripts/phase1/soak.ts --duration 86400000",
     "phase3:verify": "npm run typecheck && npx tsc -p scripts/phase3/tsconfig.json --noEmit && npm test && npm run phase3:validate && npm run build:web",
+    "phase4:test": "vitest run server/__tests__/multiSymbol.test.ts src/lib/useMarketData.test.tsx",
+    "phase4:validate": "node --import tsx scripts/phase4/run.ts --symbols 3 --sample-ms 1500 --json docs/baselines/phase-4-validation.json --markdown docs/baselines/phase-4-validation.md",
+    "phase4:verify": "npm run typecheck && npx tsc -p scripts/phase4/tsconfig.json --noEmit && npm test && npm run phase4:validate && npm run build:web",
+    "phase5:test": "vitest run server/__tests__/marketInsights.test.ts server/__tests__/alertEngine.test.ts server/__tests__/phase5Surface.test.ts server/__tests__/binanceLiquidations.test.ts",
+    "phase5:validate": "node --import tsx scripts/phase5/run.ts --json docs/baselines/phase-5-validation.json --markdown docs/baselines/phase-5-validation.md",
+    "phase5:verify": "npm run typecheck && npx tsc -p scripts/phase5/tsconfig.json --noEmit && npm test && npm run phase5:validate && npm run build:web",
     "measure:live": "node --import tsx scripts/live/measure-binance.ts",
     "start": "node --env-file-if-exists=.env --import tsx server/index.ts"
   },

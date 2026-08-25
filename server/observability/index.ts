@@ -42,6 +42,14 @@ export interface MarketObservability {
   readonly incidents: IncidentRecord[];
   readonly hooks: GatewayMetricsHooks;
   attachGateway(gateway: MarketGateway): void;
+  /**
+   * Phase 4: hot-path hooks whose exchange/symbol labels are pinned to one
+   * market session, so concurrently running gateways record metrics under
+   * their own symbol instead of whichever gateway was attached last.
+   * Accepts any `{ symbol, source }` view so factories can label sessions
+   * while the gateway instance itself is still being constructed.
+   */
+  scopedHooks(gateway: Pick<MarketGateway, "symbol" | "source">): GatewayMetricsHooks;
   recordHttpRequest(method: string, route: string, status: number, durationMs: number): void;
   setClientConnections(total: number): void;
   setSubscribedClients(total: number): void;
@@ -402,12 +410,29 @@ export function createMarketObservability(options: MarketObservabilityOptions = 
     incident: (kind: IncidentKind, reason?: string) => recordIncident(kind, reason ?? kind, "hot-path"),
   };
 
+  function scopedHooks(gateway_: Pick<MarketGateway, "symbol" | "source">): GatewayMetricsHooks {
+    const pinnedSymbol = gateway_.symbol;
+    return {
+      received: (type: string) =>
+        metrics.received.inc(1, { exchange: gateway_.source, symbol: pinnedSymbol, type }),
+      rejected: (reason: string) =>
+        metrics.rawRejected.inc(1, { exchange: gateway_.source, symbol: pinnedSymbol, reason }),
+      processed: (type: string, durationMs: number) => {
+        metrics.processing.observe(durationMs, { symbol: pinnedSymbol, type });
+      },
+      frameBuilt: (durationMs: number) =>
+        metrics.frameBuild.observe(durationMs, { symbol: pinnedSymbol }),
+      incident: (kind: IncidentKind, reason?: string) => recordIncident(kind, reason ?? kind, "hot-path"),
+    };
+  }
+
   return {
     metrics: registry,
     alerts,
     incidents,
     hooks,
     attachGateway,
+    scopedHooks,
     recordHttpRequest,
     setClientConnections,
     setSubscribedClients,

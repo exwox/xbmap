@@ -165,6 +165,78 @@ export interface MarketResetFrame extends MarketEventBase {
   frozen: boolean;
 }
 
+/** Phase 5 advanced analytics pack pushed once per second per symbol. */
+export interface InsightFrame {
+  type: 'insight';
+  algoVersion: string;
+  symbol: string;
+  generatedAt: number;
+  /** Normalized arrival time used by chart buffers (mirrors other frames). */
+  timestamp: number;
+  rollingVwap: { value: number | null; windowMs: number; sampleSeconds: number };
+  walls: Array<{
+    side: 'bid' | 'ask';
+    price: number;
+    quantity: number;
+    multipleOfMedian: number;
+    firstSeenAt: number;
+    persistenceMs: number;
+  }>;
+  addedPulled: {
+    windowMs: number;
+    bidAddedQuantity: number;
+    bidPulledQuantity: number;
+    askAddedQuantity: number;
+    askPulledQuantity: number;
+  };
+  absorption: { direction: 'bullish' | 'bearish'; price: number; tradedQuantity: number; reason: string } | null;
+  exhaustion: { direction: 'up' | 'down' | null; reason: string };
+  volumeProfile: {
+    bucketTickSize: number;
+    totalVolume: number;
+    pocPrice: number | null;
+    nodes: Array<{ price: number; volume: number; share: number }>;
+  };
+  footprint: {
+    rows: Array<{ priceTicks: number; buyVolume: number; sellVolume: number; delta: number; tradeCount: number }>;
+    maxRows: number;
+  };
+  derivatives: {
+    fundingRate: number | null;
+    nextFundingTime: number | null;
+    markPrice: number | null;
+    openInterest: number | null;
+    updatedAtMs: number | null;
+    stale: boolean;
+  };
+  liquidations: {
+    windowMs: number;
+    longLiquidations: number;
+    shortLiquidations: number;
+    longQuantity: number;
+    shortQuantity: number;
+  };
+  wallTransitions: Array<{ at: number; kind: 'appeared' | 'disappeared'; wall: Record<string, unknown> }>;
+}
+
+/** Phase 5 triggered-alert payload delivered over the same WebSocket. */
+export interface AlertNotification {
+  type: 'alert';
+  alertId: string;
+  ruleId: string;
+  kind: 'trend_score' | 'liquidity_wall' | 'volume_delta' | 'trade_velocity';
+  symbol: string;
+  ts: number;
+  timestamp: number;
+  direction: 'bullish' | 'bearish' | null;
+  value: number;
+  threshold: number;
+  baselineMedian: number | null;
+  reason: string;
+  algoVersion: string;
+  sound: boolean;
+}
+
 export type NormalizedMarketEvent =
   | DepthFrame
   | TradeBucket
@@ -173,7 +245,9 @@ export type NormalizedMarketEvent =
   | TrendSignal
   | StatusFrame
   | MarketResetFrame
-  | HeartbeatFrame;
+  | HeartbeatFrame
+  | InsightFrame
+  | AlertNotification;
 
 export type MarketDataEvent = Exclude<NormalizedMarketEvent, HeartbeatFrame>;
 

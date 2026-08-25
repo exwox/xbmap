@@ -21,16 +21,96 @@ import {
   type ServerEnvelope,
   type ServerEventType,
 } from "./types.js";
+import { INSTRUMENTS, instrumentFor, isSupportedSymbol, supportedSymbols } from "./instruments.js";
+import { InsightsRuntime, ALERT_ALGO_VERSION, SIGNAL_HORIZONS_MS } from "./insights/insightsRuntime.js";
+import type { AlertKind } from "./alerts/alertEngine.js";
+import {
+  MarketSessionManager,
+  SessionCapacityError,
+  UnknownSymbolError,
+  type SessionStatus,
+} from "./marketSessionManager.js";
 import { getTracer, initTracing } from "./observability/tracing.js";
 import {
   createMarketObservability,
   type MarketObservability,
 } from "./observability/index.js";
 
+/** Phase 4: minimal session registry contract shared by both server modes. */
+export interface SessionRegistry {
+  acquire(symbol: string): MarketGateway;
+  release(symbol: string): void;
+  get(symbol: string): MarketGateway | null;
+  has(symbol: string): boolean;
+  list(): SessionStatus[];
+  drain(): Promise<void>;
+}
+
+/**
+ * Backward-compatible registry for callers that still inject a single
+ * pre-built gateway. Only that gateway's symbol resolves; everything else
+ * raises `UnknownSymbolError`, matching the previous MVP behaviour.
+ */
+class SingleSymbolSessions implements SessionRegistry {
+  constructor(private readonly gateway: MarketGateway) {}
+
+  acquire(symbol: string): MarketGateway {
+    const normalized = symbol.trim().toUpperCase();
+    if (normalized !== this.gateway.symbol) {
+      throw new UnknownSymbolError(`Unsupported symbol: ${symbol}`);
+    }
+    return this.gateway;
+  }
+
+  release(): void {
+    // Lifecycle of an injected gateway belongs to the caller (start/close).
+  }
+
+  get(symbol: string): MarketGateway | null {
+    return symbol.trim().toUpperCase() === this.gateway.symbol ? this.gateway : null;
+  }
+
+  has(symbol: string): boolean {
+    return this.get(symbol) !== null;
+  }
+
+  list(): SessionStatus[] {
+    return [{
+      symbol: this.gateway.symbol,
+      refCount: 1,
+      running: Boolean(this.gateway.status.sessionId),
+      evictAtMs: null,
+    }];
+  }
+
+  async drain(): Promise<void> {
+    // The close path shuts the injected gateway down explicitly.
+  }
+}
+
+export interface MarketHttpServerOptions {
+  /**
+   * Phase 4 multi-symbol mode. When provided, WebSocket subscriptions may
+   * reference every registered instrument and market sessions start/stop
+   * lazily with client demand. When omitted the injected single gateway
+   * keeps its original behaviour.
+   */
+  sessions?: MarketSessionManager;
+  /** Maximum simultaneously subscribed symbols per WebSocket client. */
+  maxSubscriptionsPerClient?: number;
+  /**
+   * Phase 5 analytics/alerts runtime. When omitted a default runtime is
+   * created (rules live in memory only); production supplies one wired to the
+   * rules file and delivery channels.
+   */
+  insights?: InsightsRuntime;
+}
+
 interface RealtimeClient {
   socket: WebSocket;
   id: string;
-  subscribed: boolean;
+  /** Symbols this connection currently receives frames for. */
+  subscriptions: Set<string>;
   depth: number;
   alive: boolean;
   droppedFrames: number;
@@ -44,13 +124,23 @@ export interface MarketHttpServer {
   websocketServer: WebSocketServer;
   rawReplay: RawReplayRuntime | null;
   observability: MarketObservability;
+  sessions: SessionRegistry;
   close: () => Promise<void>;
+}
+
+function maxSubscriptionsFromEnvironment(value: number | undefined): number {
+  const parsed = Number(process.env.XBMAP_MAX_SUBSCRIPTIONS_PER_CLIENT);
+  if (value !== undefined) return Math.max(1, Math.min(10, Math.round(value)));
+  return Number.isSafeInteger(parsed) && parsed >= 1
+    ? Math.min(10, parsed)
+    : 3;
 }
 
 export function createMarketHttpServer(
   gateway = new MarketGateway(),
   rawReplay: RawReplayRuntime | null = null,
   observability = createMarketObservability(),
+  options: MarketHttpServerOptions = {},
 ): MarketHttpServer {
   const app = express();
   // Idempotent: the first call wins, so tests can inject a custom tracer via
@@ -78,6 +168,36 @@ export function createMarketHttpServer(
   app.use(express.json({ limit: "64kb", strict: true }));
   app.use("/api/v1", createRateLimiter(240, 60_000));
   observability.attachGateway(gateway);
+
+  // Phase 4: route market data through a session registry. Callers either
+  // inject a multi-symbol MarketSessionManager or keep the legacy single
+  // gateway contract.
+  const sessions: SessionRegistry = options.sessions ?? new SingleSymbolSessions(gateway);
+  const maxSubscriptionsPerClient = maxSubscriptionsFromEnvironment(options.maxSubscriptionsPerClient);
+  if (options.sessions && !options.sessions.has(gateway.symbol)) {
+    options.sessions.register(gateway);
+  }
+  const insights = options.insights ?? new InsightsRuntime();
+  const attachSessionEvents = (sessionGateway: MarketGateway) => {
+    sessionGateway.on("event", onGatewayEvent);
+    sessionGateway.on("event", (envelope) => insights.handleGatewayEvent(envelope));
+    insights.ensureSession(sessionGateway.symbol, instrumentFor(sessionGateway.symbol).tickSize);
+  };
+
+  /** Active session lookup used by REST handlers; null when not running. */
+  const activeSessionFor = (symbol: string): MarketGateway | null =>
+    sessions.get(symbol.trim().toUpperCase());
+
+  /** Parses `?symbol=`; responds and returns null on unsupported markets. */
+  const resolveSymbolQuery = (request: Request, response: Response): string | null => {
+    const raw = request.query.symbol;
+    const symbol = (typeof raw === "string" ? raw : DEFAULT_SYMBOL).trim().toUpperCase();
+    if (!isSupportedSymbol(symbol)) {
+      sendError(response, 404, "UNSUPPORTED_MARKET", `Unsupported symbol: ${raw ?? symbol}`);
+      return null;
+    }
+    return instrumentFor(symbol).symbol;
+  };
 
   app.use((request, response, next) => {
     const started = performance.now();
@@ -107,15 +227,30 @@ export function createMarketHttpServer(
   });
 
   app.get("/api/v1/health/ready", (_request, response) => {
-    const ready = isGatewayReady(gateway);
-    response.status(ready.ready ? 200 : 503).json({
-      ok: ready.ready,
+    // Phase 4: readiness aggregates every active market session. A server
+    // with zero sessions is ready to accept subscribers; any session in an
+    // unhealthy state fails the probe with the failing symbols listed.
+    const activeGateways = sessions.list()
+      .map((session) => sessions.get(session.symbol))
+      .filter((entry): entry is MarketGateway => entry !== null);
+    const checks = activeGateways.map((sessionGateway) => ({
+      symbol: sessionGateway.symbol,
+      ...isGatewayReady(sessionGateway),
+    }));
+    const failing = checks.filter((check) => !check.ready).map((check) => check.symbol);
+    const ready = failing.length === 0;
+    response.status(ready ? 200 : 503).json({
+      ok: ready,
       schemaVersion: SCHEMA_VERSION,
       serverTimestamp: Date.now(),
-      source: ready.source,
-      state: ready.state,
-      marketDataValid: ready.marketDataValid,
-      reason: ready.reason,
+      activeSessions: checks.length,
+      failingSymbols: failing,
+      reason: ready
+        ? activeGateways.length === 0
+          ? "no active market sessions; accepting subscribers"
+          : "serving"
+        : `unhealthy sessions: ${failing.join(", ")}`,
+      sessions: checks,
     });
   });
 
@@ -159,6 +294,7 @@ export function createMarketHttpServer(
       capture: gateway.captureStatus,
       history: gateway.historyStatus,
       rawReplay: rawReplay?.status ?? { enabled: false },
+      sessions: sessions.list(),
       memory: {
         rssBytes: memory.rss,
         heapUsedBytes: memory.heapUsed,
@@ -167,33 +303,54 @@ export function createMarketHttpServer(
   });
 
   app.get("/api/v1/markets", (_request, response) => {
+    const now = Date.now();
     response.json({
       schemaVersion: SCHEMA_VERSION,
-      markets: [{
-        exchange: DEFAULT_EXCHANGE,
-        symbol: gateway.symbol,
-        displaySymbol: "BTC/USDT Perpetual",
-        marketType: "perpetual",
-        tickSize: gateway.tickSize,
-        quantityStep: 0.001,
-        source: gateway.source,
-        available: true,
-      }],
+      serverTimestamp: now,
+      exchange: DEFAULT_EXCHANGE,
+      markets: INSTRUMENTS.map((instrument) => {
+        const sessionGateway = sessions.get(instrument.symbol);
+        return {
+          exchange: DEFAULT_EXCHANGE,
+          symbol: instrument.symbol,
+          displaySymbol: `${instrument.base}/${instrument.quote} Perpetual`,
+          base: instrument.base,
+          quote: instrument.quote,
+          marketType: "perpetual",
+          tickSize: sessionGateway?.tickSize ?? instrument.tickSize,
+          quantityStep: 0.001,
+          source: sessionGateway?.source ?? null,
+          available: true,
+          active: sessionGateway !== null,
+        };
+      }),
     });
   });
 
   app.get("/api/v1/snapshot", (request, response) => {
-    if (!validMarketQuery(request, response, gateway.symbol)) return;
-    if (!gateway.isMarketDataValid) {
+    const symbol = resolveSymbolQuery(request, response);
+    if (symbol === null) return;
+    const sessionGateway = sessions.get(symbol);
+    if (!sessionGateway) {
+      sendError(response, 409, "SYMBOL_NOT_ACTIVE", `No active market session for ${symbol}; subscribe via /ws first`);
+      return;
+    }
+    if (!sessionGateway.isMarketDataValid) {
       sendError(response, 503, "BOOK_NOT_READY", "Order book is syncing or invalid");
       return;
     }
-    const depth = parseBoundedInteger(request.query.depth, gateway.settings.visibleDepth, 10, 200);
-    response.json(gateway.getSnapshot(depth));
+    const depth = parseBoundedInteger(request.query.depth, sessionGateway.settings.visibleDepth, 10, 200);
+    response.json(sessionGateway.getSnapshot(depth));
   });
 
   app.get("/api/v1/history", async (request, response) => {
-    if (!validMarketQuery(request, response, gateway.symbol)) return;
+    const symbol = resolveSymbolQuery(request, response);
+    if (symbol === null) return;
+    const sessionGateway = sessions.get(symbol);
+    if (!sessionGateway) {
+      sendError(response, 409, "SYMBOL_NOT_ACTIVE", `No active market session for ${symbol}; subscribe via /ws first`);
+      return;
+    }
     const now = Date.now();
     const from = parseTimestamp(request.query.from, now - 5 * 60_000);
     const to = parseTimestamp(request.query.to, now);
@@ -202,7 +359,7 @@ export function createMarketHttpServer(
       return;
     }
     const requestedResolutionMs = parseResolution(request.query.resolution);
-    const resolutionMs = gateway.historyResolution(requestedResolutionMs);
+    const resolutionMs = sessionGateway.historyResolution(requestedResolutionMs);
     const queryLimit = historyQueryLimit();
     if (!withinHistoryBudget(from, to, resolutionMs, queryLimit)) {
       sendError(
@@ -213,11 +370,11 @@ export function createMarketHttpServer(
       );
       return;
     }
-    const items = await gateway.getHistory(from, to, resolutionMs, queryLimit);
+    const items = await sessionGateway.getHistory(from, to, resolutionMs, queryLimit);
     response.json({
       schemaVersion: SCHEMA_VERSION,
       exchange: DEFAULT_EXCHANGE,
-      symbol: gateway.symbol,
+      symbol: sessionGateway.symbol,
       from,
       to,
       resolutionMs,
@@ -225,8 +382,14 @@ export function createMarketHttpServer(
     });
   });
 
-  app.get("/api/v1/settings", (_request, response) => {
-    response.json({ schemaVersion: SCHEMA_VERSION, settings: gateway.settings });
+  const settingsGateway = (request: Request): MarketGateway => {
+    const raw = request.query.symbol;
+    if (typeof raw !== "string" || raw.trim().length === 0) return gateway;
+    return activeSessionFor(raw) ?? gateway;
+  };
+
+  app.get("/api/v1/settings", (request, response) => {
+    response.json({ schemaVersion: SCHEMA_VERSION, symbol: settingsGateway(request).symbol, settings: settingsGateway(request).settings });
   });
 
   app.put("/api/v1/settings", (request, response) => {
@@ -253,7 +416,105 @@ export function createMarketHttpServer(
       }
       patch[key] = value;
     }
-    response.json({ schemaVersion: SCHEMA_VERSION, settings: gateway.updateSettings(patch) });
+    const target = settingsGateway(request);
+    response.json({ schemaVersion: SCHEMA_VERSION, symbol: target.symbol, settings: target.updateSettings(patch) });
+  });
+
+  // ── Phase 5: alerts & advanced analytics surface ──────────────────────────
+
+  app.get("/api/v1/alerts/rules", (_request, response) => {
+    response.json({
+      schemaVersion: SCHEMA_VERSION,
+      serverTimestamp: Date.now(),
+      algoVersion: ALERT_ALGO_VERSION,
+      shadowMode: insights.alertEngine.shadowMode,
+      horizonsMs: [...SIGNAL_HORIZONS_MS],
+      baselines: insights.alertEngine.baselinesSummary(),
+      rules: insights.alertEngine.listRules(),
+    });
+  });
+
+  app.post("/api/v1/alerts/rules", (request, response) => {
+    if (!isPlainObject(request.body)) {
+      sendError(response, 400, "INVALID_ALERT_RULE", "JSON object required");
+      return;
+    }
+    try {
+      const rule = insights.alertEngine.createRule(request.body);
+      response.status(201).json({ schemaVersion: SCHEMA_VERSION, rule });
+    } catch (error) {
+      sendError(response, 400, "INVALID_ALERT_RULE",
+        error instanceof Error ? error.message : "Invalid alert rule");
+    }
+  });
+
+  app.patch("/api/v1/alerts/rules/:id", (request, response) => {
+    const body = isPlainObject(request.body) ? request.body : {};
+    const rule = insights.alertEngine.updateRule(String(request.params.id), body);
+    if (!rule) {
+      sendError(response, 404, "ALERT_RULE_NOT_FOUND", `No alert rule ${String(request.params.id)}`);
+      return;
+    }
+    response.json({ schemaVersion: SCHEMA_VERSION, rule });
+  });
+
+  app.delete("/api/v1/alerts/rules/:id", (request, response) => {
+    const deleted = insights.alertEngine.deleteRule(String(request.params.id));
+    if (!deleted) {
+      sendError(response, 404, "ALERT_RULE_NOT_FOUND", `No alert rule ${String(request.params.id)}`);
+      return;
+    }
+    response.status(204).send();
+  });
+
+  app.get("/api/v1/alerts/events", (request, response) => {
+    const limit = parseBoundedInteger(request.query.limit, 100, 1, 500);
+    response.json({
+      schemaVersion: SCHEMA_VERSION,
+      serverTimestamp: Date.now(),
+      events: insights.alertEngine.auditTrail(limit),
+    });
+  });
+
+  app.get("/api/v1/signals/performance", (request, response) => {
+    const symbol = typeof request.query.symbol === "string"
+      ? request.query.symbol.trim().toUpperCase()
+      : undefined;
+    const kind = typeof request.query.kind === "string"
+      ? request.query.kind
+      : undefined;
+    try {
+      const rows = insights.alertEngine.performance({
+        ...(symbol ? { symbol } : {}),
+        ...(kind ? { kind: kind as AlertKind } : {}),
+      });
+      response.json({
+        schemaVersion: SCHEMA_VERSION,
+        serverTimestamp: Date.now(),
+        algoVersion: ALERT_ALGO_VERSION,
+        horizonsMs: [...SIGNAL_HORIZONS_MS],
+        rows,
+      });
+    } catch (error) {
+      sendError(response, 400, "INVALID_REQUEST",
+        error instanceof Error ? error.message : "Invalid performance filter");
+    }
+  });
+
+  app.get("/api/v1/insights", (request, response) => {
+    const symbol = resolveSymbolQuery(request, response);
+    if (symbol === null) return;
+    const insight = insights.currentInsight(symbol);
+    if (!insight) {
+      sendError(response, 409, "SYMBOL_NOT_ACTIVE", `No active market session for ${symbol}`);
+      return;
+    }
+    response.json({
+      schemaVersion: SCHEMA_VERSION,
+      serverTimestamp: Date.now(),
+      symbol,
+      insight,
+    });
   });
 
   app.post("/api/v1/replay/session", async (request, response) => {
@@ -502,11 +763,17 @@ export function createMarketHttpServer(
     });
   });
 
+  /** Releases every symbol reference held by a client connection. */
+  const releaseClientSubscriptions = (client: RealtimeClient): void => {
+    for (const symbol of client.subscriptions) sessions.release(symbol);
+    client.subscriptions.clear();
+  };
+
   websocketServer.on("connection", (socket) => {
     const client: RealtimeClient = {
       socket,
       id: cryptoRandomId(),
-      subscribed: false,
+      subscriptions: new Set<string>(),
       depth: gateway.settings.visibleDepth,
       alive: true,
       droppedFrames: 0,
@@ -515,20 +782,57 @@ export function createMarketHttpServer(
     clients.add(client);
     observability.setClientConnections(clients.size);
     socket.on("pong", () => { client.alive = true; });
-    socket.on("error", () => { clients.delete(client); updateClientGauges(); });
-    socket.on("close", () => { clients.delete(client); updateClientGauges(); });
-    socket.on("message", (raw) => handleClientMessage(client, raw.toString(), gateway, clients, observability));
-    send(client, gateway.createEvent("status", gateway.status));
+    socket.on("error", () => {
+      releaseClientSubscriptions(client);
+      clients.delete(client);
+      updateClientGauges();
+    });
+    socket.on("close", () => {
+      releaseClientSubscriptions(client);
+      clients.delete(client);
+      updateClientGauges();
+    });
+    socket.on("message", (raw) => {
+      try {
+        handleClientMessage(client, raw.toString(), {
+          sessions,
+          clients,
+          observability,
+          maxSubscriptionsPerClient,
+          refreshGauges: updateClientGauges,
+        });
+      } catch (error) {
+        console.error(JSON.stringify({
+          level: "error",
+          component: "ws",
+          message: error instanceof Error ? error.message : String(error),
+        }));
+        send(client, gateway.createEvent("error", {
+          code: "INTERNAL_ERROR",
+          message: "Failed to process the request",
+        }));
+      }
+    });
+    // Greet the connection with the default market status when its session is
+    // already running; otherwise the subscribe ack carries the first status.
+    const initial = activeSessionFor(DEFAULT_SYMBOL) ?? gateway;
+    if (initial.status.sessionId) send(client, initial.createEvent("status", initial.status));
   });
 
   function updateClientGauges(): void {
     observability.setClientConnections(clients.size);
-    observability.setSubscribedClients(countSubscribed(clients));
+    let subscriptionCount = 0;
+    for (const client of clients) subscriptionCount += client.subscriptions.size;
+    observability.setSubscribedClients(subscriptionCount);
   }
 
   const onGatewayEvent = (event: ServerEnvelope) => {
+    // Phase 4: frames carry their market symbol; only connections currently
+    // subscribed to that symbol may receive them, keeping books isolated.
+    const eventSymbol = typeof event.symbol === "string" ? event.symbol.toUpperCase() : "";
     for (const client of clients) {
-      if (!client.subscribed || client.socket.readyState !== WebSocket.OPEN) continue;
+      if (client.socket.readyState !== WebSocket.OPEN) continue;
+      if (!eventSymbol || !client.subscriptions.has(eventSymbol)) continue;
       observability.recordClientBuffered(client.socket.bufferedAmount);
       if (client.socket.bufferedAmount > 8 * 1024 * 1024) {
         observability.recordDroppedFrame("buffered_amount_limit");
@@ -548,18 +852,40 @@ export function createMarketHttpServer(
       });
     }
   };
-  gateway.on("event", onGatewayEvent);
+
+  // Late-bind session events: fires immediately for already-registered
+  // sessions and for every lazily created one afterwards. The legacy
+  // single-gateway mode attaches directly so its stream keeps flowing.
+  if (options.sessions) options.sessions.setOnSessionCreated(attachSessionEvents);
+  else attachSessionEvents(gateway);
+
+  // Phase 5: one cadence step per second publishes insight frames and any
+  // deliverable alert envelopes through the same subscriber broadcast path.
+  insights.setPublisher(onGatewayEvent);
+  const insightsTimer = setInterval(() => {
+    try {
+      for (const envelope of insights.tick()) onGatewayEvent(envelope);
+    } catch (error) {
+      console.error(JSON.stringify({
+        level: "error",
+        component: "insights",
+        message: error instanceof Error ? error.message : String(error),
+      }));
+    }
+  }, 1_000);
+  insightsTimer.unref?.();
 
   const heartbeat = setInterval(() => {
     for (const client of clients) {
       if (!client.alive) {
         client.socket.terminate();
+        releaseClientSubscriptions(client);
         clients.delete(client);
         continue;
       }
       client.alive = false;
       client.socket.ping();
-      if (client.subscribed) {
+      if (client.subscriptions.size > 0) {
         send(client, gateway.createEvent("heartbeat", {
           clientId: client.id,
           uptimeMs: Math.round(process.uptime() * 1_000),
@@ -567,10 +893,11 @@ export function createMarketHttpServer(
         }));
       }
     }
+    updateClientGauges();
   }, 15_000);
   heartbeat.unref?.();
 
-  gateway.start();
+  if (!options.sessions) gateway.start();
 
   return {
     app,
@@ -579,17 +906,19 @@ export function createMarketHttpServer(
     websocketServer,
     rawReplay,
     observability,
+    sessions,
     close: () => {
       if (closePromise) return closePromise;
       closePromise = (async () => {
         closing = true;
         clearInterval(heartbeat);
+        clearInterval(insightsTimer);
         observability.stop();
-        // Stop ingress and publish the final complete buffers/status while
-        // gateway listeners and client sockets are still attached.
-        await gateway.shutdown();
+        // Flush durable history/capture buffers for every market session
+        // while gateway listeners and client sockets are still attached.
+        await sessions.drain();
+        if (!options.sessions) await gateway.shutdown();
         rawReplay?.close();
-        gateway.off("event", onGatewayEvent);
         const httpClosed = closeHttpServer(server);
         await closeRealtimeServer(websocketServer, clients);
         await httpClosed;
@@ -599,75 +928,121 @@ export function createMarketHttpServer(
   };
 }
 
+interface ClientMessageContext {
+  sessions: SessionRegistry;
+  clients: Set<RealtimeClient>;
+  observability: MarketObservability;
+  maxSubscriptionsPerClient: number;
+  refreshGauges: () => void;
+}
+
 function handleClientMessage(
   client: RealtimeClient,
   raw: string,
-  gateway: MarketGateway,
-  clients: Set<RealtimeClient>,
-  observability: MarketObservability,
+  context: ClientMessageContext,
 ): void {
+  const { sessions, maxSubscriptionsPerClient, refreshGauges } = context;
   let message: ClientMessage;
   try {
     message = JSON.parse(raw) as ClientMessage;
   } catch {
-    send(client, gateway.createEvent("error", {
-      code: "INVALID_JSON",
-      message: "WebSocket message must be valid JSON",
-    }));
+    send(client, errorEnvelope(sessions, "INVALID_JSON", "WebSocket message must be valid JSON"));
     return;
   }
   if (!message || typeof message !== "object" || typeof message.type !== "string") {
-    send(client, gateway.createEvent("error", {
-      code: "INVALID_MESSAGE",
-      message: "Message type is required",
-    }));
+    send(client, errorEnvelope(sessions, "INVALID_MESSAGE", "Message type is required"));
     return;
   }
 
   if (message.type === "subscribe") {
-    const symbol = (message.symbol ?? DEFAULT_SYMBOL).toUpperCase();
-    if ((message.exchange ?? DEFAULT_EXCHANGE) !== DEFAULT_EXCHANGE || symbol !== gateway.symbol) {
-      send(client, gateway.createEvent("error", {
-        code: "UNSUPPORTED_MARKET",
-        message: `Only ${DEFAULT_EXCHANGE}:${gateway.symbol} is available in this MVP`,
-      }));
+    const exchange = (message.exchange ?? DEFAULT_EXCHANGE).toLowerCase();
+    const symbol = (message.symbol ?? DEFAULT_SYMBOL).trim().toUpperCase();
+    if (exchange !== DEFAULT_EXCHANGE || !isSupportedSymbol(symbol)) {
+      send(client, errorEnvelope(
+        sessions,
+        "UNSUPPORTED_MARKET",
+        `${DEFAULT_EXCHANGE}:${symbol} is not supported; available symbols: ${instrumentList().join(", ")}`,
+      ));
       return;
     }
-    client.depth = parseBoundedInteger(message.depth, gateway.settings.visibleDepth, 10, 200);
-    client.subscribed = true;
+    let sessionGateway: MarketGateway;
+    try {
+      sessionGateway = sessions.acquire(symbol);
+    } catch (error) {
+      if (error instanceof SessionCapacityError) {
+        send(client, errorEnvelope(
+          sessions,
+          "SESSION_CAPACITY",
+          "Market session limit reached; release another symbol first",
+        ));
+      } else {
+        send(client, errorEnvelope(sessions, "UNSUPPORTED_MARKET", error instanceof Error ? error.message : String(error)));
+      }
+      return;
+    }
+    const alreadySubscribed = client.subscriptions.has(symbol);
+    if (!alreadySubscribed && client.subscriptions.size >= maxSubscriptionsPerClient) {
+      // Balance the acquire above so rejected upgrades never leak references.
+      sessions.release(symbol);
+      send(client, errorEnvelope(
+        sessions,
+        "SUBSCRIPTION_LIMIT",
+        `Maximum ${maxSubscriptionsPerClient} simultaneous symbol subscriptions per client`,
+      ));
+      return;
+    }
+    client.depth = parseBoundedInteger(message.depth, sessionGateway.settings.visibleDepth, 10, 200);
+    client.subscriptions.add(symbol); // Set semantics keep re-subscribes idempotent
     client.droppedFrames = 0;
-    observability.setSubscribedClients(countSubscribed(clients));
-    send(client, gateway.createEvent("subscribed", {
+    refreshGauges();
+    send(client, sessionGateway.createEvent("subscribed", {
       clientId: client.id,
       exchange: DEFAULT_EXCHANGE,
-      symbol: gateway.symbol,
+      symbol,
       depth: client.depth,
-      source: gateway.source,
+      source: sessionGateway.source,
     }));
-    if (gateway.isMarketDataValid) send(client, gateway.getSnapshot(client.depth));
-    send(client, gateway.createEvent("status", gateway.status));
+    // Snapshot cache + lifecycle: every (re)subscribe starts from a fully
+    // reconciled book state instead of partial deltas.
+    if (sessionGateway.isMarketDataValid) send(client, sessionGateway.getSnapshot(client.depth));
+    send(client, sessionGateway.createEvent("status", sessionGateway.status));
     return;
   }
 
   if (message.type === "unsubscribe") {
-    client.subscribed = false;
-    observability.setSubscribedClients(countSubscribed(clients));
-    send(client, gateway.createEvent("unsubscribed", {
-      exchange: DEFAULT_EXCHANGE,
-      symbol: gateway.symbol,
-    }));
+    const requested = typeof message.symbol === "string"
+      ? message.symbol.trim().toUpperCase()
+      : null;
+    const targets = requested
+      ? (client.subscriptions.has(requested) ? [requested] : [])
+      : [...client.subscriptions];
+    for (const symbol of targets) {
+      client.subscriptions.delete(symbol);
+      sessions.release(symbol);
+      const sessionGateway = sessions.get(symbol);
+      send(client, gatewayForEnvelope(sessions, sessionGateway).createEvent("unsubscribed", {
+        exchange: DEFAULT_EXCHANGE,
+        symbol,
+      }));
+    }
+    refreshGauges();
+    if (targets.length === 0) {
+      send(client, errorEnvelope(sessions, "UNKNOWN_SUBSCRIPTION", "The connection holds no matching subscription"));
+    }
     return;
   }
 
   if (message.type === "request_snapshot") {
-    if (client.subscribed) {
-      for (const event of createSnapshotRecoveryEvents(gateway, client.depth)) send(client, event);
+    for (const symbol of client.subscriptions) {
+      const sessionGateway = sessions.get(symbol);
+      if (!sessionGateway) continue;
+      for (const event of createSnapshotRecoveryEvents(sessionGateway, client.depth)) send(client, event);
     }
     return;
   }
 
   if (message.type === "ping") {
-    send(client, gateway.createEvent("heartbeat", {
+    send(client, gatewayForEnvelope(sessions).createEvent("heartbeat", {
       clientId: client.id,
       echoTimestamp: message.timestamp ?? null,
       uptimeMs: Math.round(process.uptime() * 1_000),
@@ -675,16 +1050,43 @@ function handleClientMessage(
     return;
   }
 
-  send(client, gateway.createEvent("error", {
-    code: "UNKNOWN_MESSAGE",
-    message: "Supported messages: subscribe, unsubscribe, request_snapshot, ping",
-  }));
+  send(client, errorEnvelope(
+    sessions,
+    "UNKNOWN_MESSAGE",
+    "Supported messages: subscribe, unsubscribe, request_snapshot, ping",
+  ));
 }
 
-function countSubscribed(clients: Set<RealtimeClient>): number {
-  let subscribed = 0;
-  for (const client of clients) if (client.subscribed) subscribed += 1;
-  return subscribed;
+/**
+ * Picks a live session to author protocol envelopes that are not tied to one
+ * market (heartbeat/error/unsubscribed acks), preferring the given session.
+ * With zero active sessions a synthetic primary-symbol envelope keeps the
+ * wire contract stable.
+ */
+function gatewayForEnvelope(sessions: SessionRegistry, preferred?: MarketGateway | null): MarketGateway {
+  if (preferred) return preferred;
+  const first = sessions.list()
+    .map((session) => sessions.get(session.symbol))
+    .find((entry): entry is MarketGateway => entry !== null);
+  if (first) return first;
+  return syntheticEnvelopeGateway();
+}
+
+function syntheticEnvelopeGateway(): MarketGateway {
+  const createEvent = (type: ServerEventType, data: unknown): ServerEnvelope => ({
+    type,
+    schemaVersion: SCHEMA_VERSION,
+    exchange: DEFAULT_EXCHANGE,
+    symbol: DEFAULT_SYMBOL,
+    serverTimestamp: Date.now(),
+    sequence: 0,
+    data,
+  });
+  return { createEvent } as unknown as MarketGateway;
+}
+
+function errorEnvelope(sessions: SessionRegistry, code: string, message: string): ServerEnvelope {
+  return gatewayForEnvelope(sessions).createEvent("error", { code, message });
 }
 
 function send(
@@ -756,18 +1158,9 @@ function mountStaticApplication(app: express.Express): void {
   });
 }
 
-function validMarketQuery(request: Request, response: Response, symbol: string): boolean {
-  const exchange = typeof request.query.exchange === "string"
-    ? request.query.exchange.toLowerCase()
-    : DEFAULT_EXCHANGE;
-  const requestedSymbol = typeof request.query.symbol === "string"
-    ? request.query.symbol.toUpperCase()
-    : symbol;
-  if (exchange !== DEFAULT_EXCHANGE || requestedSymbol !== symbol) {
-    sendError(response, 404, "UNSUPPORTED_MARKET", `Only ${DEFAULT_EXCHANGE}:${symbol} is available`);
-    return false;
-  }
-  return true;
+/** Symbols exposed by the Phase 4 instrument registry. */
+function instrumentList(): string[] {
+  return supportedSymbols();
 }
 
 function parseTimestamp(value: unknown, fallback: number): number {

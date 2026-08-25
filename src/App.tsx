@@ -14,8 +14,14 @@ import {
   type VisualSettings,
 } from './components/SettingsPanel';
 import { TrendPanel } from './components/TrendPanel';
+import { AlertsPanel } from './components/AlertsPanel';
 import { createDemoReplay } from './demoReplay';
 import { fetchReplayCapture } from './lib/replayApi';
+import {
+  SymbolPicker,
+  decimalsForTickSize,
+  metaForSymbol,
+} from './components/SymbolPicker';
 import {
   assessDataQuality,
   formatCompactNumber,
@@ -29,9 +35,20 @@ import {
 
 type UiMode = 'live' | 'demo' | 'replay';
 
-const SYMBOLS = {
-  BTCUSDT: { short: 'BTC', quote: 'USDT', mark: '₿', accent: '#f59d21' },
-} as const;
+const WATCHLIST_STORAGE_KEY = 'liquidmap.watchlist';
+
+function loadWatchlist(): string[] {
+  try {
+    const raw = localStorage.getItem(WATCHLIST_STORAGE_KEY);
+    if (!raw) return ['BTCUSDT', 'ETHUSDT'];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return ['BTCUSDT', 'ETHUSDT'];
+    const symbols = parsed.filter((entry): entry is string => typeof entry === 'string');
+    return symbols.length > 0 ? symbols : ['BTCUSDT', 'ETHUSDT'];
+  } catch {
+    return ['BTCUSDT', 'ETHUSDT'];
+  }
+}
 
 const TIME_BUCKETS = [
   { label: '1s', value: 1_000 },
@@ -87,7 +104,9 @@ function App() {
   const [timeBucketMs, setTimeBucketMs] = useState(1_000);
   const [showBubbles, setShowBubbles] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [alertsOpen, setAlertsOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [watchlist, setWatchlist] = useState<string[]>(loadWatchlist);
   const chartPanelRef = useRef<HTMLElement>(null);
   const [rendererBenchmarkNow, setRendererBenchmarkNow] = useState(Date.now);
   const rendererBenchmarkData = useMemo(
@@ -127,12 +146,32 @@ function App() {
 
   const replayActive = market.replay.status !== 'idle';
   const uiMode: UiMode = replayActive ? 'replay' : market.mode;
-  const symbolMeta = SYMBOLS[market.selection.symbol as keyof typeof SYMBOLS] ?? {
-    short: market.selection.symbol.replace(/USDT$/, ''),
-    quote: 'USDT',
-    mark: market.selection.symbol.slice(0, 1),
-    accent: '#50c8ff',
-  };
+  const symbolMeta = metaForSymbol(market.selection.symbol);
+  const activeTickSize = symbolMeta.tickSize;
+  const activePriceDecimals = decimalsForTickSize(activeTickSize);
+
+  const selectSymbol = useCallback((symbol: string) => {
+    if (symbol === market.selection.symbol) return;
+    // Leaving replay keeps the mental model simple: a market switch always
+    // lands on the live stream of the newly selected instrument.
+    if (replayActive) market.replayControls.goLive();
+    market.setSelection({ exchange: 'binance', symbol, market: 'perpetual' });
+    setToast(`Beralih ke ${symbol}; menunggu snapshot book tervalidasi.`);
+  }, [market.replayControls, market.selection.symbol, market.setSelection, replayActive]);
+
+  const toggleWatchlistEntry = useCallback((symbol: string) => {
+    setWatchlist((current) => {
+      const next = current.includes(symbol)
+        ? current.filter((entry) => entry !== symbol)
+        : [...current, symbol];
+      try {
+        localStorage.setItem(WATCHLIST_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // Storage quota/private mode: watchlist still works for this session.
+      }
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('liquidmap.visual-settings', JSON.stringify(visualSettings));
@@ -200,11 +239,11 @@ function App() {
     () => market.trades.slice(-10).reverse().map((trade, index) => ({
       id: `${trade.timestamp}-${trade.sequence}-${index}`,
       time: formatTimestamp(trade.timestamp, { includeMilliseconds: true }),
-      price: formatPrice(trade.vwap || trade.price, { tickSize: 0.1 }),
+      price: formatPrice(trade.vwap || trade.price, { tickSize: activeTickSize }),
       size: formatCompactNumber(trade.totalVolume, { maximumFractionDigits: 3 }),
       side: trade.side === 'sell' ? 'sell' : 'buy',
     })),
-    [market.trades],
+    [activeTickSize, market.trades],
   );
 
   const flowMetrics = useMemo(() => [
@@ -331,22 +370,20 @@ function App() {
 
         <span className="top-divider" aria-hidden="true" />
 
-        <button className="market-selector" title="Pilih market" type="button" onClick={() => setToast('BTCUSDT perpetual adalah market pertama pada MVP ini.')}>
-          <span className="asset-logo" style={{ background: symbolMeta.accent }}>{symbolMeta.mark}</span>
-          <span className="market-copy">
-            <strong>{symbolMeta.short} / {symbolMeta.quote}</strong>
-            <span>Binance · Perpetual</span>
-          </span>
-          <Icon name="chevron" size={13} />
-        </button>
+        <SymbolPicker
+          current={market.selection.symbol}
+          onSelect={selectSymbol}
+          onToggleWatch={toggleWatchlistEntry}
+          watchlist={watchlist}
+        />
 
         <div className="price-block" aria-live="polite">
-          <strong>{formatPrice(currentPrice, { tickSize: 0.1 })}</strong>
+          <strong>{formatPrice(currentPrice, { tickSize: activeTickSize })}</strong>
           <span className="price-meta">
             <span className={priceChange >= 0 ? 'positive' : 'negative'}>
               {priceChange >= 0 ? '+' : ''}{(priceChange * 100).toFixed(2)}%
             </span>
-            <span>Spread {formatPrice(market.metrics?.spread, { tickSize: 0.1 })}</span>
+            <span>Spread {formatPrice(market.metrics?.spread, { tickSize: activeTickSize })}</span>
           </span>
         </div>
 
@@ -375,8 +412,16 @@ function App() {
           <span>· {formatLatency(market.metrics?.latencyMs ?? market.status.latencyMs)}</span>
         </div>
 
-        <button className="icon-button" type="button" onClick={() => setToast('Alert tren siap. Integrasi notifikasi eksternal berada pada fase berikutnya.')} aria-label="Buka alert">
+        <button
+          className={`icon-button ${alertsOpen ? 'active' : ''}`}
+          onClick={() => setAlertsOpen(true)}
+          aria-label="Buka panel alert"
+          type="button"
+        >
           <Icon name="bell" size={16} />
+          {market.alertsFeed.length > 0 && !alertsOpen && (
+            <span className="bell-badge">{Math.min(market.alertsFeed.length, 9)}</span>
+          )}
         </button>
         <button className="icon-button" type="button" onClick={() => setSettingsOpen(true)} aria-label="Buka pengaturan">
           <Icon name="settings" size={16} />
@@ -458,13 +503,13 @@ function App() {
                 height="100%"
                 isStale={!dataQuality.valid}
                 maxBubbleRadius={30}
-                priceDecimals={market.selection.symbol === 'BTCUSDT' ? 1 : 2}
+                priceDecimals={activePriceDecimals}
                 now={RENDERER_BENCHMARK ? rendererBenchmarkNow : undefined}
                 priceSeries={rendererBenchmarkData?.priceSeries ?? market.priceSeries}
                 staleSince={lastMarketUpdateAt ?? undefined}
                 status={RENDERER_BENCHMARK ? 'replay' : chartStatus(uiMode, market.status.state, market.isStale)}
                 symbol={`${symbolMeta.short}-${symbolMeta.quote}-PERP`}
-                tickSize={market.selection.symbol === 'BTCUSDT' ? 0.1 : 0.01}
+                tickSize={activeTickSize}
                 timeBucketMs={timeBucketMs}
                 timeWindowMs={visualSettings.timeWindowMs}
                 trades={heatmapTrades}
@@ -555,6 +600,14 @@ function App() {
         }}
         open={settingsOpen}
         settings={visualSettings}
+      />
+
+      <AlertsPanel
+        alertsFeed={market.alertsFeed}
+        currentSymbol={market.selection.symbol}
+        insight={market.insight}
+        onClose={() => setAlertsOpen(false)}
+        open={alertsOpen}
       />
 
       {toast && (

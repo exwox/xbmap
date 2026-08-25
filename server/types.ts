@@ -191,7 +191,11 @@ export type ServerEventType =
   | "subscribed"
   | "unsubscribed"
   | "replay_frame"
-  | "market_reset";
+  | "market_reset"
+  /** Phase 5: advanced analytics pack (walls, VWAP, profile, footprint, …). */
+  | "insight"
+  /** Phase 5: a configured alert rule fired (post-cooldown/shadow filtering). */
+  | "alert";
 
 export interface ServerEnvelope<T = unknown> {
   type: ServerEventType;

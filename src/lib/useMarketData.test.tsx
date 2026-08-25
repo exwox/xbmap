@@ -178,3 +178,78 @@ describe('useMarketData validity epochs', () => {
     expect(current().status).toMatchObject({ state: 'live', sessionId: 'session-b' });
   });
 });
+
+describe('useMarketData phase 4 symbol switching', () => {
+  it('clears buffered state and resubscribes to the newly selected symbol', () => {
+    const socket = new FakeSocket();
+    let latest: UseMarketDataResult | null = null;
+    const createSocket = () => socket as unknown as WebSocket;
+    const current = (): UseMarketDataResult => {
+      if (latest === null) throw new Error('Hook has not rendered');
+      return latest;
+    };
+
+    function Harness() {
+      latest = useMarketData({
+        mode: 'live',
+        autoConnect: true,
+        createSocket,
+        heartbeatIntervalMs: 60_000,
+        staleAfterMs: 60_000,
+      });
+      return null;
+    }
+
+    const container = document.createElement('div');
+    document.body.append(container);
+    const root = createRoot(container);
+    roots.push(root);
+    act(() => root.render(<Harness />));
+    act(() => socket.open());
+
+    const sendFrame = (type: string, sequence: number, data: unknown) => {
+      socket.message(JSON.stringify({
+        type,
+        schemaVersion: 1,
+        exchange: 'binance',
+        symbol: 'BTCUSDT',
+        serverTimestamp: 1_700_000_000_000 + sequence,
+        exchangeTimestamp: 1_700_000_000_000 + sequence,
+        sequence,
+        streamId: 'switch-stream',
+        deliverySequence: sequence,
+        data,
+      }));
+    };
+
+    act(() => {
+      sendFrame('snapshot', 1, { lastUpdateId: 1, bids: [[100, 1]], asks: [[101, 1]] });
+      sendFrame('status', 2, {
+        state: 'live',
+        source: 'binance',
+        message: 'live',
+        stale: false,
+        resyncCount: 0,
+        lastEventTimestamp: 1_700_000_000_000,
+        validity: 'valid',
+        transportAlive: true,
+        marketActive: true,
+        synchronized: true,
+        frozen: false,
+      });
+    });
+    if (latest === null) throw new Error('Hook has not rendered');
+    expect(current().depthFrames).toHaveLength(1);
+
+    const sentBefore = socket.sent.length;
+    act(() => current().setSelection({ symbol: 'ETHUSDT', exchange: 'binance', market: 'perpetual' }));
+
+    // Buffered frames from the previous market must disappear immediately.
+    expect(current().depthFrames).toEqual([]);
+    expect(current().selection.symbol).toBe('ETHUSDT');
+
+    const recent = socket.sent.slice(sentBefore).map((raw) => JSON.parse(raw) as { type: string; symbol?: string });
+    expect(recent.some((message) => message.type === 'unsubscribe' && message.symbol === 'BTCUSDT')).toBe(true);
+    expect(recent.some((message) => message.type === 'subscribe' && message.symbol === 'ETHUSDT')).toBe(true);
+  });
+});

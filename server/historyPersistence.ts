@@ -463,6 +463,8 @@ export async function historyPersistenceFromEnvironment(
   environment: NodeJS.ProcessEnv = process.env,
 ): Promise<HistoryPersistence | null> {
   const queryMaxRows = envInteger(environment.XBMAP_HISTORY_QUERY_MAX_POINTS, 10_000);
+  // Phase 4 multi-symbol: each symbol persists under its own subtree so
+  // concurrent market sessions never mix segments, rollups, or backups.
   const commonOptions = {
     symbol,
     tickSize,
@@ -476,7 +478,7 @@ export async function historyPersistenceFromEnvironment(
     queryMaxRows,
     queryMaxRangeMs: envInteger(environment.XBMAP_HISTORY_QUERY_MAX_RANGE_MS, 24 * 60 * 60_000),
     retentionIntervalMs: envInteger(environment.XBMAP_HISTORY_RETENTION_INTERVAL_MS, 60 * 60_000),
-    backupDirectory: environment.XBMAP_HISTORY_BACKUP_DIR,
+    backupDirectory: scopePathPerSymbol(environment.XBMAP_HISTORY_BACKUP_DIR, symbol),
     backupIntervalMs: envInteger(environment.XBMAP_HISTORY_BACKUP_INTERVAL_MS, 24 * 60 * 60_000),
     backupKeep: envInteger(environment.XBMAP_HISTORY_BACKUP_KEEP, 7),
     retentionPolicy: retentionFromEnvironment(environment),
@@ -484,7 +486,7 @@ export async function historyPersistenceFromEnvironment(
 
   const backend = (environment.XBMAP_HISTORY_BACKEND ?? "").trim().toLowerCase();
   if (backend === "" || backend === "file") {
-    const directory = environment.XBMAP_HISTORY_DIR?.trim();
+    const directory = scopePathPerSymbol(environment.XBMAP_HISTORY_DIR?.trim() || undefined, symbol);
     if (!directory) return null;
     return HistoryPersistence.open({ ...commonOptions, directory });
   }
@@ -558,6 +560,20 @@ function envInteger(value: string | undefined, fallback: number): number {
   if (!value) return fallback;
   const parsed = Number(value);
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+/**
+ * Appends the lowercased symbol to a configured root path. A falsy root stays
+ * falsy (feature disabled) so callers keep their enable/disable semantics.
+ */
+export function scopePathPerSymbol(
+  root: string | undefined,
+  symbol: string,
+): string | undefined {
+  const trimmed = root?.trim();
+  if (!trimmed) return undefined;
+  const slug = symbol.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "-");
+  return join(trimmed, slug || "default");
 }
 
 function retentionFromEnvironment(environment: NodeJS.ProcessEnv): HistoryRetentionPolicy {

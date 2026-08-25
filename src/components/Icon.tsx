@@ -4,14 +4,19 @@ export type IconName =
   | 'activity'
   | 'bell'
   | 'chevron'
+  | 'close'
   | 'crosshair'
   | 'expand'
   | 'layers'
   | 'pause'
   | 'play'
+  | 'plus'
   | 'reset'
+  | 'search'
   | 'settings'
   | 'sliders'
+  | 'star'
+  | 'trash'
   | 'wifi'
   | 'zap';
 
@@ -29,6 +34,12 @@ const paths: Record<IconName, React.ReactNode> = {
     </>
   ),
   chevron: <path d="m9 18 6-6-6-6" />,
+  close: (
+    <>
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </>
+  ),
   crosshair: (
     <>
       <circle cx="12" cy="12" r="7" />
@@ -53,10 +64,22 @@ const paths: Record<IconName, React.ReactNode> = {
     </>
   ),
   play: <path d="m8 5 11 7-11 7V5Z" />,
+  plus: (
+    <>
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </>
+  ),
   reset: (
     <>
       <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
       <path d="M3 3v5h5" />
+    </>
+  ),
+  search: (
+    <>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m21 21-4.3-4.3" />
     </>
   ),
   settings: (
@@ -69,6 +92,17 @@ const paths: Record<IconName, React.ReactNode> = {
     <>
       <path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3" />
       <path d="M1 14h6M9 8h6M17 16h6" />
+    </>
+  ),
+  star: (
+    <path d="m12 3 2.7 5.6 6.1.8-4.5 4.3 1.1 6.1L12 16.9l-5.4 2.9 1.1-6.1L3.2 9.4l6.1-.8L12 3Z" />
+  ),
+  trash: (
+    <>
+      <path d="M3 6h18" />
+      <path d="M8 6V4h8v2" />
+      <path d="M19 6l-1 14H6L5 6" />
+      <path d="M10 11v6M14 11v6" />
     </>
   ),
   wifi: (

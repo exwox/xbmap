@@ -26,5 +26,7 @@ export interface Phase4ValidationReport {
     passed: number;
     failed: number;
     allPassed: boolean;
+    /** Wall-clock runtime of the whole validation suite in milliseconds. */
+    durationMs?: number;
   };
 }

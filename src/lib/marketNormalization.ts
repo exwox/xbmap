@@ -1,10 +1,12 @@
 import {
   MARKET_SCHEMA_VERSION,
+  type AlertNotification,
   type ConnectionState,
   type DataQualityCounters,
   type DataValidity,
   type DepthFrame,
   type HeartbeatFrame,
+  type InsightFrame,
   type MarketResetFrame,
   type MarketSide,
   type MetricFrame,
@@ -525,7 +527,27 @@ export function normalizeMarketEvent(
     case 'heartbeat':
     case 'pong':
       return normalizeHeartbeat(context);
+    // Phase 5 payloads are produced by our own gateway and pass through with
+    // only the envelope identity re-asserted, so the UI stays schema-stable.
+    case 'insight':
+      return passthroughFrame<InsightFrame>(context, 'insight');
+    case 'alert':
+      return passthroughFrame<AlertNotification>(context, 'alert');
     default:
       return null;
   }
+}
+
+function passthroughFrame<T extends { symbol: string; type: string; timestamp: number }>(
+  context: EventContext,
+  type: 'insight' | 'alert',
+): T | null {
+  if (!isRecord(context.data)) return null;
+  return {
+    ...(context.data as object),
+    type,
+    symbol: context.symbol,
+    timestamp: context.exchangeTimestamp || context.serverTimestamp,
+    algoVersion: firstString(context.data, ['algoVersion', 'algo_version']) ?? '',
+  } as unknown as T;
 }
