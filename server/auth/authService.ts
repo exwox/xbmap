@@ -16,6 +16,12 @@ export interface AuthServiceOptions {
   lockoutMs?: number;
   now?: () => number;
   randomToken?: () => string;
+  /**
+   * Phase 6 multi-user: external credential check (e.g. UserStore). When
+   * provided it replaces the single built-in bootstrap credential, while
+   * lockout/session behaviour stays identical.
+   */
+  verify?: (username: string, password: string) => boolean;
 }
 
 export interface AdminCredential {
@@ -52,7 +58,8 @@ function safeEqualHex(leftHex: string, rightHex: string): boolean {
 }
 
 export class AuthService {
-  private readonly credential: StoredCredential;
+  private readonly credential: StoredCredential | null;
+  private readonly verifyFn: ((username: string, password: string) => boolean) | null;
   private readonly ttlMs: number;
   private readonly maxFailedAttempts: number;
   private readonly lockoutMs: number;
@@ -64,17 +71,23 @@ export class AuthService {
 
   constructor(
     options: AuthServiceOptions = {},
-    credential: AdminCredential,
+    credential?: AdminCredential,
   ) {
-    if (!credential.username || !credential.password) {
-      throw new TypeError("AuthService requires a non-empty username and password");
-    }
     this.ttlMs = options.sessionTtlMs ?? 7 * 24 * 60 * 60_000;
     this.maxFailedAttempts = Math.max(1, options.maxFailedAttempts ?? 5);
     this.lockoutMs = Math.max(0, options.lockoutMs ?? 300_000);
     this.now = options.now ?? Date.now;
     this.randomToken =
       options.randomToken ?? (() => randomBytes(32).toString("hex"));
+    this.verifyFn = options.verify ?? null;
+    if (this.verifyFn) {
+      // Multi-user mode: credential verification is delegated to the store.
+      this.credential = null;
+      return;
+    }
+    if (!credential?.username || !credential.password) {
+      throw new TypeError("AuthService requires a verify function or an admin username/password");
+    }
     const saltHex = randomBytes(16).toString("hex");
     this.credential = {
       username: credential.username,
@@ -92,15 +105,23 @@ export class AuthService {
         retryInSeconds: Math.ceil((this.lockedUntilMs - now) / 1_000),
       };
     }
-    const userMatches = timingSafeEqual(
-      createHash("sha256").update(username).digest(),
-      createHash("sha256").update(this.credential.username).digest(),
-    );
-    const passwordOk = safeEqualHex(
-      hashPassword(password ?? "", this.credential.saltHex),
-      this.credential.hashHex,
-    );
-    if (!userMatches || !passwordOk) {
+    let userMatches = false;
+    if (this.verifyFn) {
+      userMatches = this.verifyFn(username, password ?? "");
+    } else {
+      const cred = this.credential;
+      userMatches =
+        cred !== null &&
+        timingSafeEqual(
+          createHash("sha256").update(username).digest(),
+          createHash("sha256").update(cred.username).digest(),
+        ) &&
+        safeEqualHex(
+          hashPassword(password ?? "", cred.saltHex),
+          cred.hashHex,
+        );
+    }
+    if (!userMatches) {
       this.failedAttempts += 1;
       if (this.failedAttempts >= this.maxFailedAttempts) {
         this.lockedUntilMs = now + this.lockoutMs;
@@ -118,7 +139,10 @@ export class AuthService {
 
     this.failedAttempts = 0;
     this.lockedUntilMs = 0;
-    return { ok: true, username: this.credential.username };
+    return {
+      ok: true,
+      username: this.verifyFn ? username : this.credential!.username,
+    };
   }
 
   /** Opaque bearer token bound to the username; sliding expiry on validation. */

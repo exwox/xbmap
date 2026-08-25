@@ -201,6 +201,7 @@ Contoh REST per simbol: `GET /api/v1/markets` (registry instrumen + status sesi)
 | `XBMAP_ADMIN_PASSWORD` | kosong | Password admin (wajib jika auth diaktifkan) |
 | `XBMAP_SESSION_TTL_MS` | `604800000` | Usia sesi login (sliding) |
 | `XBMAP_ADMIN_TOKEN` | kosong | Token untuk `/metrics` & `/api/v1/observability/*` (set di produksi!) |
+| `XBMAP_USERS_FILE` | kosong | File JSON multi-pengguna + workspace + feature flags |
 | `XBMAP_CAPTURE_DIR` | kosong/nonaktif | Direktori privat untuk raw public-feed capture gzip |
 | `XBMAP_CAPTURE_QUEUE_RECORDS` | `8192` | Batas jumlah record yang menunggu ditulis |
 | `XBMAP_CAPTURE_QUEUE_BYTES` | `16777216` | Batas byte antrean recorder |

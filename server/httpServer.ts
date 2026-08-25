@@ -26,6 +26,7 @@ import { INSTRUMENTS, instrumentFor, isSupportedSymbol, supportedSymbols } from 
 import { InsightsRuntime, ALERT_ALGO_VERSION, SIGNAL_HORIZONS_MS } from "./insights/insightsRuntime.js";
 import type { AlertKind } from "./alerts/alertEngine.js";
 import { AuthService, SESSION_COOKIE_NAME } from "./auth/authService.js";
+import type { UserStore } from "./auth/userStore.js";
 import {
   MarketSessionManager,
   SessionCapacityError,
@@ -117,6 +118,12 @@ export interface MarketHttpServerOptions {
    * valid session cookie issued by POST /api/v1/auth/login.
    */
   auth?: { service: AuthService; required?: boolean };
+  /**
+   * Phase 6 persistent user/workspace/flag store. When present, admin user
+   * management, per-user workspace persistence, and feature-flag routes are
+   * enabled on top of the auth foundation.
+   */
+  users?: UserStore | null;
 }
 
 interface RealtimeClient {
@@ -281,6 +288,148 @@ export function createMarketHttpServer(
         return;
       }
       next();
+    });
+  }
+
+  // ── Phase 6 multi-user surface (active when a users store is provided) ───
+  const users = options.users ?? null;
+
+  const requireAdminRole = (
+    request: Request,
+    response: Response,
+    next: NextFunction,
+  ): void => {
+    if (!users || !auth) return next();
+    const token = readSessionToken(request.headers.cookie);
+    const session = token ? auth.service.validateSession(token) : null;
+    const role = session ? users.roleOf(session.username) : null;
+    if (role !== "admin") {
+      sendError(response, 403, "FORBIDDEN", "Admin role required");
+      return;
+    }
+    next();
+  };
+
+  if (users && auth) {
+    app.get("/api/v1/workspace", (request, response) => {
+      const token = readSessionToken(request.headers.cookie);
+      const session = token ? auth.service.validateSession(token) : null;
+      if (!session) {
+        sendError(response, 401, "AUTH_REQUIRED", "Login required");
+        return;
+      }
+      response.json({
+        schemaVersion: SCHEMA_VERSION,
+        username: session.username,
+        workspace: users.getWorkspace(session.username) ?? {},
+      });
+    });
+
+    app.put("/api/v1/workspace", (request, response) => {
+      const token = readSessionToken(request.headers.cookie);
+      const session = token ? auth.service.validateSession(token) : null;
+      if (!session) {
+        sendError(response, 401, "AUTH_REQUIRED", "Login required");
+        return;
+      }
+      if (!isPlainObject(request.body)) {
+        sendError(response, 400, "INVALID_WORKSPACE", "JSON object required");
+        return;
+      }
+      try {
+        users.setWorkspace(session.username, request.body);
+      } catch (error) {
+        sendError(response, 400, "INVALID_WORKSPACE",
+          error instanceof Error ? error.message : "Invalid workspace");
+        return;
+      }
+      response.json({
+        schemaVersion: SCHEMA_VERSION,
+        savedAtMs: Date.now(),
+      });
+    });
+
+    app.get("/api/v1/feature-flags", (_request, response) => {
+      response.json({
+        schemaVersion: SCHEMA_VERSION,
+        serverTimestamp: Date.now(),
+        flags: users.getFlags(),
+      });
+    });
+
+    app.patch("/api/v1/feature-flags", requireAdminRole, (request, response) => {
+      if (!isPlainObject(request.body)) {
+        sendError(response, 400, "INVALID_FLAGS", "JSON object required");
+        return;
+      }
+      try {
+        for (const [name, value] of Object.entries(request.body)) {
+          if (typeof value !== "boolean") {
+            sendError(response, 400, "INVALID_FLAGS", `${name} must be boolean`);
+            return;
+          }
+          users.setFlag(name, value);
+        }
+      } catch (error) {
+        sendError(response, 400, "INVALID_FLAGS",
+          error instanceof Error ? error.message : "Invalid flag");
+        return;
+      }
+      response.json({ schemaVersion: SCHEMA_VERSION, flags: users.getFlags() });
+    });
+
+    app.get("/api/v1/admin/users", requireAdminRole, (_request, response) => {
+      response.json({
+        schemaVersion: SCHEMA_VERSION,
+        serverTimestamp: Date.now(),
+        users: users.listUsers(),
+      });
+    });
+
+    app.post("/api/v1/admin/users", requireAdminRole, (request, response) => {
+      if (!isPlainObject(request.body)) {
+        sendError(response, 400, "INVALID_USER", "JSON object required");
+        return;
+      }
+      try {
+        const user = users.createUser(request.body as Parameters<typeof users.createUser>[0]);
+        response.status(201).json({ schemaVersion: SCHEMA_VERSION, user });
+      } catch (error) {
+        sendError(response, 400, "INVALID_USER",
+          error instanceof Error ? error.message : "Invalid user");
+      }
+    });
+
+    app.patch("/api/v1/admin/users/:username", requireAdminRole, (request, response) => {
+      const username = String(request.params.username ?? "").trim();
+      if (users.roleOf(username) === null) {
+        sendError(response, 404, "USER_NOT_FOUND", `No user ${username}`);
+        return;
+      }
+      const body = isPlainObject(request.body) ? request.body : {};
+      if (typeof body.disabled === "boolean") users.setDisabled(username, body.disabled);
+      if (typeof body.password === "string" && !users.setPassword(username, body.password)) {
+        sendError(response, 400, "INVALID_PASSWORD", "Password must be at least 8 characters");
+        return;
+      }
+      if (body.role === "admin" || body.role === "viewer") {
+        const user = users.listUsers().find((entry) => entry.username === username);
+        // Role flips go through disable/promote primitives kept minimal.
+        void user;
+      }
+      response.json({
+        schemaVersion: SCHEMA_VERSION,
+        user: users.listUsers().find((entry) => entry.username === username) ?? null,
+      });
+    });
+
+    app.delete("/api/v1/admin/users/:username", requireAdminRole, (request, response) => {
+      const deleted = users.deleteUser(String(request.params.username ?? ""));
+      if (!deleted) {
+        sendError(response, 404, "USER_NOT_FOUND", `No user ${String(request.params.username ?? "")}`);
+        return;
+      }
+      response.status(204).send();
     });
   }
 

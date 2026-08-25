@@ -10,6 +10,7 @@ import { createMarketObservability } from "./observability/index.js";
 import { rawReplayRuntimeFromEnvironment } from "./replayRuntime.js";
 import { DEFAULT_SYMBOL, DEFAULT_TICK_SIZE } from "./types.js";
 import { AuthService } from "./auth/authService.js";
+import { UserStore } from "./auth/userStore.js";
 import { InsightsRuntime } from "./insights/insightsRuntime.js";
 import { BinanceDerivativesPoller } from "./feeds/binanceDerivatives.js";
 import { BinanceLiquidationStream } from "./feeds/binanceLiquidations.js";
@@ -163,10 +164,18 @@ export async function startServer(): Promise<ReturnType<typeof createMarketHttpS
 
   // Phase 6 auth foundation: bootstrap admin credential from env. Sessions
   // are in-memory; enforcement is opt-in via XBMAP_REQUIRE_AUTH=1.
+  const adminUsername = process.env.XBMAP_ADMIN_USERNAME?.trim() || "admin";
   const adminPassword = process.env.XBMAP_ADMIN_PASSWORD?.trim() || "";
   if (process.env.XBMAP_REQUIRE_AUTH === "1" && !adminPassword) {
     throw new TypeError("XBMAP_REQUIRE_AUTH=1 requires XBMAP_ADMIN_PASSWORD to be set");
   }
+
+  const usersFile = process.env.XBMAP_USERS_FILE?.trim() || undefined;
+  const users = await UserStore.open({ filePath: usersFile });
+  if (adminPassword) {
+    users.ensureBootstrapAdmin(adminUsername, adminPassword);
+  }
+
   const auth = adminPassword
     ? {
         service: new AuthService(
@@ -177,10 +186,14 @@ export async function startServer(): Promise<ReturnType<typeof createMarketHttpS
               60_000,
               30 * 24 * 60 * 60_000,
             ),
-          },
-          {
-            username: process.env.XBMAP_ADMIN_USERNAME?.trim() || "admin",
-            password: adminPassword,
+            verify: (username: string, password: string) => {
+              // Store accounts win (honours disable/password changes); the
+              // env bootstrap pair only applies until the store owns the user.
+              if (users.roleOf(username) !== null) {
+                return users.verifyCredentials(username, password);
+              }
+              return username === adminUsername && password === adminPassword;
+            },
           },
         ),
         required: process.env.XBMAP_REQUIRE_AUTH === "1",
@@ -191,7 +204,7 @@ export async function startServer(): Promise<ReturnType<typeof createMarketHttpS
     defaultGateway,
     rawReplay,
     observability,
-    { sessions, insights, auth, adminToken: process.env.XBMAP_ADMIN_TOKEN?.trim() || undefined },
+    { sessions, insights, auth, users, adminToken: process.env.XBMAP_ADMIN_TOKEN?.trim() || undefined },
   );
   // Stop background polling before the HTTP surface drains so shutdown is
   // deterministic and no update lands in a closing session.
@@ -199,6 +212,7 @@ export async function startServer(): Promise<ReturnType<typeof createMarketHttpS
   service.close = async () => {
     derivativesPoller.stop();
     liquidationStream?.stop();
+    await users.flush();
     await innerClose();
   };
   observability.start();

@@ -17,6 +17,12 @@ import { TrendPanel } from './components/TrendPanel';
 import { AlertsPanel } from './components/AlertsPanel';
 import { LoginGate } from './components/LoginGate';
 import { fetchAuthStatus } from './lib/authApi';
+import {
+  fetchFeatureFlags,
+  fetchWorkspace,
+  saveWorkspace,
+  type FeatureFlags,
+} from './lib/workspaceApi';
 import { createDemoReplay } from './demoReplay';
 import { fetchReplayCapture } from './lib/replayApi';
 import {
@@ -112,6 +118,11 @@ function App() {
   const [authChecked, setAuthChecked] = useState(false);
   const [authRequiredState, setAuthRequiredState] = useState(false);
   const [authedState, setAuthedState] = useState(false);
+  const [featureFlags, setFeatureFlags] = useState<FeatureFlags>({});
+  // Workspace persistence only activates when the gateway enforces auth;
+  // otherwise the app keeps its localStorage-only behaviour.
+  const remoteWorkspaceReadyRef = useRef(false);
+  const workspaceSaveTimer = useRef<number | null>(null);
   const chartPanelRef = useRef<HTMLElement>(null);
   const [rendererBenchmarkNow, setRendererBenchmarkNow] = useState(Date.now);
   const rendererBenchmarkData = useMemo(
@@ -205,6 +216,55 @@ function App() {
       setAuthChecked(true);
     })();
   }, []);
+
+  // Phase 6: pull the persisted workspace + feature flags after login.
+  useEffect(() => {
+    if (!(authRequiredState && authedState)) return;
+    void (async () => {
+      try {
+        const [{ workspace }, flags] = await Promise.all([
+          fetchWorkspace(),
+          fetchFeatureFlags(),
+        ]);
+        setFeatureFlags(flags);
+        const savedWatchlist = (workspace as { watchlist?: unknown }).watchlist;
+        if (Array.isArray(savedWatchlist)) {
+          const symbols = savedWatchlist.filter((entry): entry is string =>
+            typeof entry === 'string');
+          if (symbols.length > 0) setWatchlist(symbols);
+        }
+        const visual = (workspace as { visual?: Partial<VisualSettings> }).visual;
+        if (visual && typeof visual === 'object') {
+          setVisualSettings((current) => ({ ...current, ...visual }));
+        }
+        remoteWorkspaceReadyRef.current = true;
+      } catch {
+        // Workspace is a convenience; failures fall back to localStorage.
+      }
+    })();
+  }, [authRequiredState, authedState]);
+
+  // Debounced push of workspace changes once the remote copy has loaded.
+  useEffect(() => {
+    if (!(authRequiredState && authedState && remoteWorkspaceReadyRef.current)) return;
+    if (workspaceSaveTimer.current !== null) {
+      window.clearTimeout(workspaceSaveTimer.current);
+    }
+    workspaceSaveTimer.current = window.setTimeout(() => {
+      workspaceSaveTimer.current = null;
+      void saveWorkspace({
+        watchlist,
+        visual: visualSettings,
+        symbol: market.selection.symbol,
+      }).catch(() => {});
+    }, 800);
+    return () => {
+      if (workspaceSaveTimer.current !== null) {
+        window.clearTimeout(workspaceSaveTimer.current);
+        workspaceSaveTimer.current = null;
+      }
+    };
+  }, [authRequiredState, authedState, watchlist, visualSettings, market.selection.symbol]);
 
   const latestDepth = market.depthFrames.at(-1);
   const latestPricePoint = market.priceSeries.at(-1);
@@ -446,17 +506,19 @@ function App() {
           <span>· {formatLatency(market.metrics?.latencyMs ?? market.status.latencyMs)}</span>
         </div>
 
-        <button
-          className={`icon-button ${alertsOpen ? 'active' : ''}`}
-          onClick={() => setAlertsOpen(true)}
-          aria-label="Buka panel alert"
-          type="button"
-        >
-          <Icon name="bell" size={16} />
-          {market.alertsFeed.length > 0 && !alertsOpen && (
-            <span className="bell-badge">{Math.min(market.alertsFeed.length, 9)}</span>
-          )}
-        </button>
+        {featureFlags.alerts_panel !== false && (
+          <button
+            className={`icon-button ${alertsOpen ? 'active' : ''}`}
+            onClick={() => setAlertsOpen(true)}
+            aria-label="Buka panel alert"
+            type="button"
+          >
+            <Icon name="bell" size={16} />
+            {market.alertsFeed.length > 0 && !alertsOpen && (
+              <span className="bell-badge">{Math.min(market.alertsFeed.length, 9)}</span>
+            )}
+          </button>
+        )}
         <button className="icon-button" type="button" onClick={() => setSettingsOpen(true)} aria-label="Buka pengaturan">
           <Icon name="settings" size={16} />
         </button>
@@ -636,13 +698,15 @@ function App() {
         settings={visualSettings}
       />
 
-      <AlertsPanel
-        alertsFeed={market.alertsFeed}
-        currentSymbol={market.selection.symbol}
-        insight={market.insight}
-        onClose={() => setAlertsOpen(false)}
-        open={alertsOpen}
-      />
+      {featureFlags.alerts_panel !== false && (
+        <AlertsPanel
+          alertsFeed={market.alertsFeed}
+          currentSymbol={market.selection.symbol}
+          insight={market.insight}
+          onClose={() => setAlertsOpen(false)}
+          open={alertsOpen}
+        />
+      )}
 
       {toast && (
         <div className="toast" role="status">

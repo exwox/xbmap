@@ -129,6 +129,10 @@ Detail pelaksanaan: [`phase-5/exit-report.md`](./phase-5/exit-report.md).
 
 ### Fitur produk
 - [~] Autentikasi + session management — **fondasi selesai** (`server/auth/authService.ts`: bootstrap admin scrypt, sesi cookie httpOnly sliding, lockout; enforcement opt-in `XBMAP_REQUIRE_AUTH=1` mencakup REST + WS upgrade; gate UI `LoginGate`) · multi-user & manajemen akun menyusul
+- [x] **Multi-pengguna persisten** (`XBMAP_USERS_FILE`, `server/auth/userStore.ts`: role admin/viewer, disable, ganti password) + REST admin `/api/v1/admin/users*`
+- [x] **Workspace per pengguna** (watchlist + pengaturan visual; GET/PUT `/api/v1/workspace`, sinkron debounce di UI)
+- [x] **Feature flag sederhana** (`/api/v1/feature-flags` GET authed / PATCH admin; contoh konsumsi: sembunyikan panel alert)
+- [x] **Threat modeling** (`docs/security/threat-model.md`, STRIDE per permukaan)
 - [ ] Workspace tersimpan
 - [ ] Watchlist pengguna persisten
 - [ ] Penyimpanan layout/threshold/warna/alert
