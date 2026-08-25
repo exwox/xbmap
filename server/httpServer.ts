@@ -21,6 +21,7 @@ import {
   type ServerEnvelope,
   type ServerEventType,
 } from "./types.js";
+import { getTracer, initTracing } from "./observability/tracing.js";
 import {
   createMarketObservability,
   type MarketObservability,
@@ -52,6 +53,9 @@ export function createMarketHttpServer(
   observability = createMarketObservability(),
 ): MarketHttpServer {
   const app = express();
+  // Idempotent: the first call wins, so tests can inject a custom tracer via
+  // initTracing before creating additional servers.
+  if (!getTracer()) initTracing();
   const allowedOrigins = parseAllowedOrigins(process.env.CORS_ORIGIN);
   app.disable("x-powered-by");
   app.use((request, response, next) => {
@@ -77,6 +81,10 @@ export function createMarketHttpServer(
 
   app.use((request, response, next) => {
     const started = performance.now();
+    const tracer = getTracer();
+    const span = tracer?.startSpan(`http ${request.method} ${request.path}`, {
+      attributes: { "http.method": request.method, "http.route": request.path },
+    });
     response.once("finish", () => {
       observability.recordHttpRequest(
         request.method,
@@ -84,6 +92,7 @@ export function createMarketHttpServer(
         response.statusCode,
         performance.now() - started,
       );
+      span?.end(response.statusCode < 500 ? "ok" : "error", { "http.status_code": response.statusCode });
     });
     next();
   });

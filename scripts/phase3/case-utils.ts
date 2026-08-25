@@ -61,6 +61,19 @@ export function assertionBelow(
   };
 }
 
+export function assertionContains(
+  name: string,
+  haystack: string,
+  needle: string,
+): Phase3Assertion {
+  return {
+    name,
+    passed: haystack.includes(needle),
+    expected: `includes "${needle}"`,
+    actual: haystack.length > 200 ? haystack.slice(0, 200) + "..." : haystack,
+  };
+}
+
 export function round(value: number, digits = 3): number {
   const scale = 10 ** digits;
   return Math.round(value * scale) / scale;

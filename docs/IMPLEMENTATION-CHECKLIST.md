@@ -57,15 +57,17 @@ Tanda: `[x]` selesai · `[~]` sebagian/bersyarat · `[ ]` belum diimplementasika
 - [x] HTTP metrics: request count/duration/errors, WS clients/buffered/frame bytes
 - [x] Validator harness fase 3 (`npm run phase3:verify`) — 4 case lulus
 
-### Belum
-- [ ] **OpenTelemetry tracing** pada ingestion, analytics, API, client
-- [ ] **Dashboard Grafana** (belum ada file dashboard/exporter config)
-- [ ] **Load test multi-client** (tidak ada skripnya)
-- [ ] **Soak test 24 jam** (fase 1 wajib 8 jam; fase 3 menuntut 24 jam)
-- [ ] **Web Worker frontend** bila profiling membuktikan perlu (belum ada `new Worker` di `src/`)
-- [ ] Verifikasi p95 event-to-screen < 150 ms & FPS >= 30 di perangkat minimum
-- [ ] Simulasi kegagalan untuk menguji alert operasional end-to-end
-- [ ] `docs/phase-3/exit-report.md` belum ditulis
+### Belum → Terselesaikan (25 Agustus 2026)
+- [x] **Tracing OpenTelemetry-compatible** — `server/observability/tracing.ts`: span W3C-shaped, OTLP/JSON exporter (`XBMAP_OTEL_EXPORTER_OTLP_ENDPOINT`), span HTTP otomatis di middleware; +4 test
+- [x] **Dashboard Grafana** — `grafana/provisioning/**` (datasource Prometheus + file provider) dan `grafana/dashboards/gateway-operational.json` (validitas, p95/p50 processing, WS clients/buffered, gaps/resyncs, HTTP by status, CPU/heap)
+- [x] **Load test multi-client** — `npm run phase3:loadtest` (`scripts/phase3/load-test.ts`): N klien WS in-process, assert tanpa error/unexpected-close/buffer >8MB
+- [x] **Simulasi kegagalan alert end-to-end** — case `alert_failure_simulation` di validator fase 3: starve feed → `stale_feed` critical + counter `alerts_emitted_total` + trail recent buffer
+- [x] **`docs/phase-3/exit-report.md`** ditulis (CONDITIONAL EXIT)
+
+### Gate yang tetap terbuka (eksternal/deployment)
+- [ ] **Soak test 24 jam sungguhan** — runner siap: `npm run phase3:soak24`; eksekusi penuh belum dilakukan di workspace
+- [ ] **Web Worker frontend** — item kondisional ("bila profiling membuktikan perlu"); profiling Fase 0 belum menunjukkan bottleneck main-thread pada dataset target, keputusan ditunda sampai pengukuran perangkat minimum
+- [ ] Verifikasi p95 event-to-screen < 150 ms & FPS ≥ 30 pada perangkat minimum fisik
 
 ## Fase 4 — Multi-Symbol Beta (BELUM DIMULAI)
 

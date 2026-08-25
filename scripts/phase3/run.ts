@@ -11,7 +11,7 @@ import {
   PHASE3_VALIDATION_SCHEMA_VERSION,
   type Phase3ValidationReport,
 } from "./types.js";
-import { measureCase, assertion, assertionBelow } from "./case-utils.js";
+import { measureCase, assertion, assertionBelow, assertionContains } from "./case-utils.js";
 
 function closeServer(server: http.Server): Promise<void> {
   return new Promise((resolve) => server.close(() => resolve()));
@@ -104,6 +104,76 @@ async function startTestServer(): Promise<HttpServerHandle> {
     observability,
     gateway,
   };
+}
+
+async function validateAlertFailureSimulation(): Promise<Phase3ValidationReport["cases"][number]> {
+  return measureCase("alert_failure_simulation", async () => {
+    // Deterministic failure injection: a heap sampler pinned at 95% crosses the
+    // critical threshold on the very first sampler tick, exercising the full
+    // path evaluator -> structured log -> counter -> HTTP surface.
+    const observability = createMarketObservability({
+      intervalMs: 500,
+      memorySampler: () => 0.95,
+    });
+    const gateway = new MarketGateway({ forceDemo: true, metrics: observability.hooks });
+    observability.attachGateway(gateway);
+    const service = createMarketHttpServer(gateway, null, observability);
+    await new Promise<void>((resolve, reject) => {
+      service.server.once("error", reject);
+      service.server.listen(0, "127.0.0.1", resolve);
+    });
+    const address = service.server.address();
+    if (typeof address !== "object" || !address) throw new Error("no port");
+    const port = address.port;
+    try {
+      const fired = observability.sampleOnce();
+      const pressure = fired.find((event) => event.rule === "memory_pressure" && event.active);
+
+      const alertsSurface = await fetchJson(`http://127.0.0.1:${port}/api/v1/observability/alerts`);
+      const alertsBody = alertsSurface.json as { active?: Array<{ rule?: string }>; recent?: unknown[] };
+      const exposition = observability.metrics.render();
+
+      const assertions = [
+        assertion(
+          "memory_pressure fired from injected sampler",
+          true,
+          Boolean(pressure),
+        ),
+        assertionContains(
+          "message flags the critical threshold crossing",
+          pressure?.message ?? "",
+          "critical",
+        ),
+        assertion(
+          "active rule visible on the alerts HTTP surface",
+          true,
+          (alertsBody.active ?? []).some((state) => state.rule === "memory_pressure"),
+        ),
+        assertionContains(
+          "alerts_emitted_total carries the memory_pressure rule",
+          exposition,
+          'alerts_emitted_total{rule="memory_pressure"',
+        ),
+        assertionContains(
+          "transition retained in the recent buffer",
+          "true",
+          String(alertsBody.recent?.some((event) => (event as { rule?: string }).rule === "memory_pressure")),
+        ),
+      ];
+
+      return {
+        assertions,
+        observations: {
+          message: pressure?.message ?? null,
+          activeRules: (alertsBody.active ?? []).map((state) => state.rule),
+        },
+        notes: [],
+      };
+    } finally {
+      observability.stop();
+      await closeServer(service.server);
+    }
+  });
 }
 
 async function validateMetricsExposition(): Promise<Phase3ValidationReport["cases"][number]> {
@@ -244,6 +314,7 @@ async function runPhase3Validation(): Promise<Phase3ValidationReport> {
     await validateMetricsExposition(),
     await validateLivenessAndReadiness(),
     await validateAlertEvaluation(),
+    await validateAlertFailureSimulation(),
     await validateMetricsStability(),
   ];
   const passed = cases.filter((candidate) => candidate.passed).length;

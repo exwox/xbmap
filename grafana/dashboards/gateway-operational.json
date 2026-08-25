@@ -1,0 +1,60 @@
+{
+  "title": "LiquidMap Gateway — Operasional",
+  "uid": "liquidmap-gateway",
+  "schemaVersion": 39,
+  "editable": true,
+  "time": { "from": "now-15m", "to": "now" },
+  "refresh": "10s",
+  "panels": [
+    {
+      "type": "stat", "id": 1, "title": "Market data valid",
+      "gridPos": { "x": 0, "y": 0, "w": 4, "h": 4 },
+      "targets": [{ "expr": "max(market_data_valid)" }]
+    },
+    {
+      "type": "timeseries", "id": 2, "title": "Event processing latency p95 (ms)",
+      "gridPos": { "x": 4, "y": 0, "w": 10, "h": 8 },
+      "targets": [{
+        "expr": "histogram_quantile(0.95, sum(rate(gateway_event_processing_ms_bucket[5m])) by (le))",
+        "legendFormat": "p95"
+      }, {
+        "expr": "histogram_quantile(0.50, sum(rate(gateway_event_processing_ms_bucket[5m])) by (le))",
+        "legendFormat": "p50"
+      }]
+    },
+    {
+      "type": "timeseries", "id": 3, "title": "WS clients",
+      "gridPos": { "x": 14, "y": 0, "w": 10, "h": 4 },
+      "targets": [{ "expr": "websocket_clients", "legendFormat": "{{subscription}}" }]
+    },
+    {
+      "type": "timeseries", "id": 4, "title": "WS buffered bytes p95",
+      "gridPos": { "x": 14, "y": 4, "w": 10, "h": 4 },
+      "targets": [{
+        "expr": "histogram_quantile(0.95, sum(rate(websocket_buffered_bytes_bucket[5m])) by (le))",
+        "legendFormat": "p95"
+      }]
+    },
+    {
+      "type": "timeseries", "id": 5, "title": "Sequence gaps / resyncs (rate/s)",
+      "gridPos": { "x": 0, "y": 8, "w": 8, "h": 8 },
+      "targets": [{ "expr": "sum(rate(orderbook_sequence_gap_total[5m]))", "legendFormat": "gaps" },
+                   { "expr": "sum(rate(orderbook_resync_total[5m]))", "legendFormat": "resyncs" }]
+    },
+    {
+      "type": "timeseries", "id": 6, "title": "HTTP requests rate by status",
+      "gridPos": { "x": 8, "y": 8, "w": 8, "h": 8 },
+      "targets": [{ "expr": "sum(rate(http_requests_total[5m])) by (status)", "legendFormat": "{{status}}" }]
+    },
+    {
+      "type": "timeseries", "id": 7, "title": "Process CPU ratio & heap",
+      "gridPos": { "x": 16, "y": 8, "w": 8, "h": 4 },
+      "targets": [{ "expr": "process_cpu_ratio{service=\"gateway\"}", "legendFormat": "cpu" },
+                   { "expr": "process_heap_used_bytes{service=\"gateway\"}", "legendFormat": "heap" }]
+    },
+    {
+      "type": "table", "id": 8, "title": "Alert rules aktif",
+      "gridPos": { "x": 16, "y": 12, "w": 8, "h": 4 }
+    }
+  ]
+}

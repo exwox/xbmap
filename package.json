@@ -26,11 +26,14 @@
     "phase2:validate": "node --import tsx scripts/phase2/run.ts",
     "phase2:verify": "npm run typecheck && npx tsc -p scripts/phase2/tsconfig.json --noEmit && npm test && npm run phase2:validate && npm run build:web",
     "phase3:validate": "node --import tsx scripts/phase3/run.ts",
+    "phase3:loadtest": "node --import tsx scripts/phase3/load-test.ts --clients 25 --duration 20",
+    "phase3:soak24": "node --expose-gc --import tsx scripts/phase1/soak.ts --duration 86400000",
     "phase3:verify": "npm run typecheck && npx tsc -p scripts/phase3/tsconfig.json --noEmit && npm test && npm run phase3:validate && npm run build:web",
     "measure:live": "node --import tsx scripts/live/measure-binance.ts",
     "start": "node --env-file-if-exists=.env --import tsx server/index.ts"
   },
   "dependencies": {
+    "@opentelemetry/api": "^1.9.1",
     "@types/pg": "^8.23.1",
     "cors": "^2.8.5",
     "express": "^5.1.0",
