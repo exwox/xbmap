@@ -1,41 +1,31 @@
-export const PHASE3_VALIDATION_SCHEMA_VERSION = 1 as const;
+export const PHASE2_VALIDATION_SCHEMA_VERSION = 1 as const;
 
-export type MetricFamily = {
-  /** Prometheus-style `metric_family_name` key */
-  name: string;
-  /** Prometheus metadata TYPE line */
-  type: "TYPE" | "COUNTER" | "GAUGE" | "HISTOGRAM" | "SUMMARY" | "UNTYPED";
-  /** The full `# TYPE` text line emitted for the family */
-  typeLine: string;
-};
-
-export interface Phase3Assertion {
+export interface Phase2Assertion {
   name: string;
   passed: boolean;
   expected: string | number | boolean;
   actual: string | number | boolean;
 }
 
-export interface Phase3ValidationCase {
+export interface Phase2ValidationCase {
   id: string;
   passed: boolean;
   durationMs: number;
-  assertions: Phase3Assertion[];
-  observations: Record<string, unknown>;
+  assertions: Phase2Assertion[];
+  observations: Record<string, string | number | boolean>;
   notes: string[];
 }
 
-export interface Phase3ValidationReport {
-  validationSchemaVersion: typeof PHASE3_VALIDATION_SCHEMA_VERSION;
-  kind: "phase-3-observability-validation";
+export interface Phase2ValidationReport {
+  validationSchemaVersion: typeof PHASE2_VALIDATION_SCHEMA_VERSION;
+  kind: "phase-2-storage-replay-validation";
   deterministicInputs: true;
   generatedAt: string;
-  cases: Phase3ValidationCase[];
+  cases: Phase2ValidationCase[];
   summary: {
     passed: number;
     failed: number;
     allPassed: boolean;
   };
 }
-
 
