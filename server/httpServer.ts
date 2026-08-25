@@ -1,4 +1,5 @@
 import { createServer, type Server as HttpServer } from "node:http";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { performance } from "node:perf_hooks";
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -24,6 +25,7 @@ import {
 import { INSTRUMENTS, instrumentFor, isSupportedSymbol, supportedSymbols } from "./instruments.js";
 import { InsightsRuntime, ALERT_ALGO_VERSION, SIGNAL_HORIZONS_MS } from "./insights/insightsRuntime.js";
 import type { AlertKind } from "./alerts/alertEngine.js";
+import { AuthService, SESSION_COOKIE_NAME } from "./auth/authService.js";
 import {
   MarketSessionManager,
   SessionCapacityError,
@@ -104,6 +106,17 @@ export interface MarketHttpServerOptions {
    * rules file and delivery channels.
    */
   insights?: InsightsRuntime;
+  /**
+   * Phase 5 hardening: when set, `/metrics` and `/api/v1/observability/*`
+   * require this token via `x-admin-token` header or `Authorization: Bearer`.
+   */
+  adminToken?: string | null;
+  /**
+   * Phase 6 auth foundation. When `required` is true, every `/api/v1/*`
+   * route except `/auth/*` and `/health*` (and the WebSocket upgrade) needs a
+   * valid session cookie issued by POST /api/v1/auth/login.
+   */
+  auth?: { service: AuthService; required?: boolean };
 }
 
 interface RealtimeClient {
@@ -148,10 +161,25 @@ export function createMarketHttpServer(
   if (!getTracer()) initTracing();
   const allowedOrigins = parseAllowedOrigins(process.env.CORS_ORIGIN);
   app.disable("x-powered-by");
+  // Production bundle has no inline scripts/styles; React applies styles via
+  // CSSOM, so a strict policy works without 'unsafe-inline' for scripts.
+  const contentSecurityPolicy = [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self'",
+    "img-src 'self' data:",
+    "font-src 'self' data:",
+    "connect-src 'self' ws: wss:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+  ].join("; ");
   app.use((request, response, next) => {
     response.setHeader("X-Content-Type-Options", "nosniff");
     response.setHeader("Referrer-Policy", "no-referrer");
     response.setHeader("X-Frame-Options", "DENY");
+    response.setHeader("Content-Security-Policy", contentSecurityPolicy);
     next();
   });
   app.use(cors({
@@ -167,6 +195,117 @@ export function createMarketHttpServer(
   }));
   app.use(express.json({ limit: "64kb", strict: true }));
   app.use("/api/v1", createRateLimiter(240, 60_000));
+
+  // ── Phase 6 auth foundation (public routes) ──────────────────────────────
+  const auth = options.auth ?? null;
+  const authRequired = auth?.required === true;
+
+  if (auth) {
+    app.get("/api/v1/auth/status", (request, response) => {
+      const token = readSessionToken(request.headers.cookie);
+      const session = token ? auth.service.validateSession(token) : null;
+      response.json({
+        schemaVersion: SCHEMA_VERSION,
+        serverTimestamp: Date.now(),
+        required: authRequired,
+        authenticated: session !== null,
+        ...(session ? { username: session.username } : {}),
+      });
+    });
+
+    app.post("/api/v1/auth/login", (request, response) => {
+      if (!isPlainObject(request.body)) {
+        sendError(response, 400, "INVALID_LOGIN", "JSON object required");
+        return;
+      }
+      const result = auth.service.authenticate(
+        String(request.body.username ?? ""),
+        String(request.body.password ?? ""),
+      );
+      if (!result.ok) {
+        const locked = result.reason === "account_locked";
+        response.status(locked ? 423 : 401).json({
+          schemaVersion: SCHEMA_VERSION,
+          error: {
+            code: locked ? "ACCOUNT_LOCKED" : "INVALID_CREDENTIALS",
+            message: locked
+              ? `Terlalu banyak percobaan gagal; coba lagi dalam ${result.retryInSeconds} detik`
+              : "Username atau password salah",
+          },
+          ...(locked ? { retryInSeconds: result.retryInSeconds } : {}),
+          serverTimestamp: Date.now(),
+        });
+        return;
+      }
+      const session = auth.service.createSession(result.username);
+      response.setHeader(
+        "Set-Cookie",
+        sessionCookie(session.token, session.expiresAtMs, request),
+      );
+      response.json({
+        schemaVersion: SCHEMA_VERSION,
+        authenticated: true,
+        username: session.username,
+        expiresAtMs: session.expiresAtMs,
+        serverTimestamp: Date.now(),
+      });
+    });
+
+    app.post("/api/v1/auth/logout", (request, response) => {
+      const token = readSessionToken(request.headers.cookie);
+      if (token) auth.service.revokeSession(token);
+      response.setHeader(
+        "Set-Cookie",
+        `${SESSION_COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`,
+      );
+      response.json({
+        schemaVersion: SCHEMA_VERSION,
+        authenticated: false,
+        serverTimestamp: Date.now(),
+      });
+    });
+  }
+
+  // Enforcement sits after the public /auth and before every protected
+  // /api/v1 route; health probes stay open for infrastructure checks.
+  if (auth && authRequired) {
+    app.use((request, response, next) => {
+      if (request.path.startsWith("/auth/") || request.path.startsWith("/health")) {
+        next();
+        return;
+      }
+      const token = readSessionToken(request.headers.cookie);
+      const session = token ? auth.service.validateSession(token) : null;
+      if (!session) {
+        sendError(response, 401, "AUTH_REQUIRED", "Login required");
+        return;
+      }
+      next();
+    });
+  }
+
+  // Phase 5 hardening: admin token guards Prometheus metrics and the
+  // observability surface independently of the user-auth layer.
+  const adminToken =
+    typeof options.adminToken === "string" && options.adminToken.length > 0
+      ? options.adminToken
+      : null;
+  const requireAdminToken = (
+    request: Request,
+    response: Response,
+    next: NextFunction,
+  ): void => {
+    if (!adminToken) return next();
+    const bearer = request.header("authorization");
+    const provided =
+      request.header("x-admin-token") ??
+      (bearer?.startsWith("Bearer ") ? bearer.slice(7) : undefined);
+    if (provided && timingSafeEqualString(provided, adminToken)) return next();
+    sendError(response, 401, "UNAUTHORIZED", "Admin token required");
+  };
+  app.use("/metrics", requireAdminToken);
+  app.use("/api/v1/observability", requireAdminToken);
+
   observability.attachGateway(gateway);
 
   // Phase 4: route market data through a session registry. Callers either
@@ -758,6 +897,17 @@ export function createMarketHttpServer(
       socket.destroy();
       return;
     }
+    // Phase 6: the WebSocket handshake carries cookies, so enforcement is a
+    // plain session lookup before the upgrade completes.
+    if (auth && authRequired) {
+      const token = readSessionToken(request.headers.cookie);
+      const session = token ? auth.service.validateSession(token) : null;
+      if (!session) {
+        socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
+        socket.destroy();
+        return;
+      }
+    }
     websocketServer.handleUpgrade(request, socket, head, (websocket) => {
       websocketServer.emit("connection", websocket, request);
     });
@@ -1161,6 +1311,57 @@ function mountStaticApplication(app: express.Express): void {
 /** Symbols exposed by the Phase 4 instrument registry. */
 function instrumentList(): string[] {
   return supportedSymbols();
+}
+
+// ── Phase 6 cookie/session helpers ────────────────────────────────────────
+
+function parseCookies(header: string | undefined): Record<string, string> {
+  const cookies: Record<string, string> = {};
+  if (!header) return cookies;
+  for (const part of header.split(";")) {
+    const separator = part.indexOf("=");
+    if (separator <= 0) continue;
+    const name = part.slice(0, separator).trim();
+    const value = part.slice(separator + 1).trim();
+    if (name) {
+      try {
+        cookies[name] = decodeURIComponent(value);
+      } catch {
+        cookies[name] = value;
+      }
+    }
+  }
+  return cookies;
+}
+
+function readSessionToken(cookieHeader: string | undefined): string | null {
+  const token = parseCookies(cookieHeader)[SESSION_COOKIE_NAME];
+  return token && token.length > 0 ? token : null;
+}
+
+function sessionCookie(
+  token: string,
+  expiresAtMs: number,
+  request: Request,
+): string {
+  const parts = [
+    `${SESSION_COOKIE_NAME}=${token}`,
+    "Path=/",
+    "HttpOnly",
+    "SameSite=Lax",
+    `Expires=${new Date(expiresAtMs).toUTCString()}`,
+  ];
+  if (request.secure || request.headers["x-forwarded-proto"] === "https") {
+    parts.push("Secure");
+  }
+  return parts.join("; ");
+}
+
+/** Compares secrets without leaking length or early-exit timing. */
+function timingSafeEqualString(provided: string, secret: string): boolean {
+  const left = createHash("sha256").update(provided).digest();
+  const right = createHash("sha256").update(secret).digest();
+  return timingSafeEqual(left, right);
 }
 
 function parseTimestamp(value: unknown, fallback: number): number {

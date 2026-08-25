@@ -1,11 +1,11 @@
 # Phase 5 validation report
 
-Generated: 2026-08-25T11:57:12.053Z
+Generated: 2026-08-25T17:36:50.553Z
 
 | Case | Result | Duration ms | Assertions |
 |---|---|---:|---:|
-| insights-determinism | PASS | 20 | 1/1 |
-| alert-cooldown-shadow | PASS | 2 | 5/5 |
+| insights-determinism | PASS | 29 | 1/1 |
+| alert-cooldown-shadow | PASS | 3 | 5/5 |
 | signal-horizons | PASS | 1 | 5/5 |
 
 Summary: 3 passed, 0 failed

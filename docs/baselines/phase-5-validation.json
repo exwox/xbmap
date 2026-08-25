@@ -2,12 +2,12 @@
   "validationSchemaVersion": 1,
   "kind": "phase-5-deployment-validation",
   "deterministicInputs": true,
-  "generatedAt": "2026-08-25T11:57:12.053Z",
+  "generatedAt": "2026-08-25T17:36:50.553Z",
   "cases": [
     {
       "id": "insights-determinism",
       "passed": true,
-      "durationMs": 20,
+      "durationMs": 29,
       "assertions": [
         {
           "name": "identical frames across runs (algo insights-v1)",
@@ -26,7 +26,7 @@
     {
       "id": "alert-cooldown-shadow",
       "passed": true,
-      "durationMs": 2,
+      "durationMs": 3,
       "assertions": [
         {
           "name": "live trigger delivered once",
@@ -185,6 +185,6 @@
     "passed": 3,
     "failed": 0,
     "allPassed": true,
-    "durationMs": 24
+    "durationMs": 33
   }
 }

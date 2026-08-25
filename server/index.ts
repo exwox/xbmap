@@ -9,6 +9,7 @@ import { MarketSessionManager } from "./marketSessionManager.js";
 import { createMarketObservability } from "./observability/index.js";
 import { rawReplayRuntimeFromEnvironment } from "./replayRuntime.js";
 import { DEFAULT_SYMBOL, DEFAULT_TICK_SIZE } from "./types.js";
+import { AuthService } from "./auth/authService.js";
 import { InsightsRuntime } from "./insights/insightsRuntime.js";
 import { BinanceDerivativesPoller } from "./feeds/binanceDerivatives.js";
 import { BinanceLiquidationStream } from "./feeds/binanceLiquidations.js";
@@ -160,11 +161,37 @@ export async function startServer(): Promise<ReturnType<typeof createMarketHttpS
     liquidationStream.start((event) => insights.pushLiquidation(event));
   }
 
+  // Phase 6 auth foundation: bootstrap admin credential from env. Sessions
+  // are in-memory; enforcement is opt-in via XBMAP_REQUIRE_AUTH=1.
+  const adminPassword = process.env.XBMAP_ADMIN_PASSWORD?.trim() || "";
+  if (process.env.XBMAP_REQUIRE_AUTH === "1" && !adminPassword) {
+    throw new TypeError("XBMAP_REQUIRE_AUTH=1 requires XBMAP_ADMIN_PASSWORD to be set");
+  }
+  const auth = adminPassword
+    ? {
+        service: new AuthService(
+          {
+            sessionTtlMs: envBoundedInteger(
+              process.env.XBMAP_SESSION_TTL_MS,
+              7 * 24 * 60 * 60_000,
+              60_000,
+              30 * 24 * 60 * 60_000,
+            ),
+          },
+          {
+            username: process.env.XBMAP_ADMIN_USERNAME?.trim() || "admin",
+            password: adminPassword,
+          },
+        ),
+        required: process.env.XBMAP_REQUIRE_AUTH === "1",
+      }
+    : undefined;
+
   const service = createMarketHttpServer(
     defaultGateway,
     rawReplay,
     observability,
-    { sessions, insights },
+    { sessions, insights, auth, adminToken: process.env.XBMAP_ADMIN_TOKEN?.trim() || undefined },
   );
   // Stop background polling before the HTTP surface drains so shutdown is
   // deterministic and no update lands in a closing session.

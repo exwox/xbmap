@@ -128,7 +128,7 @@ Detail pelaksanaan: [`phase-5/exit-report.md`](./phase-5/exit-report.md).
 ## Fase 6 — Product Beta (BELUM DIMULAI)
 
 ### Fitur produk
-- [ ] Autentikasi + session management
+- [~] Autentikasi + session management — **fondasi selesai** (`server/auth/authService.ts`: bootstrap admin scrypt, sesi cookie httpOnly sliding, lockout; enforcement opt-in `XBMAP_REQUIRE_AUTH=1` mencakup REST + WS upgrade; gate UI `LoginGate`) · multi-user & manajemen akun menyusul
 - [ ] Workspace tersimpan
 - [ ] Watchlist pengguna persisten
 - [ ] Penyimpanan layout/threshold/warna/alert
@@ -140,7 +140,7 @@ Detail pelaksanaan: [`phase-5/exit-report.md`](./phase-5/exit-report.md).
 ### Keamanan
 - [ ] Threat modeling
 - [ ] Rate limit berbasis pengguna (per-IP sudah ada)
-- [ ] CSP header produksi (belum ada `Content-Security-Policy`)
+- [x] CSP header produksi (`script-src 'self'` tanpa inline; `frame-ancestors 'none'`; ws/wss untuk live data)
 - [ ] Dependency & container scanning
 - [ ] Secret manager
 - [ ] Audit log perubahan konfigurasi
@@ -159,7 +159,7 @@ Detail pelaksanaan: [`phase-5/exit-report.md`](./phase-5/exit-report.md).
 
 - [x] Repo git rusak → diperbaiki (commit awal `ae011bd`)
 - [x] Handler `unhandledRejection` → ditambahkan di `server/index.ts`
-- [ ] Proteksi auth/port terpisah untuk `/metrics` & endpoint observability
+- [x] Proteksi `/metrics` & `/api/v1/observability/*` via `XBMAP_ADMIN_TOKEN` (`x-admin-token`/Bearer; port terpisah ditunda hingga kebutuhan deployment nyata)
 - [ ] Artefak baseline validasi fase 2/3 ke `docs/baselines/`
 - [ ] Link mati `docs/baselines/phase-2-validation.md` di exit-report fase 2
 - [x] CI pipeline (`.github/workflows/ci.yml`: typecheck + unit tests + validasi offline fase 4/5 pada Node 22 & 24, plus job build produksi dengan artifact `dist/`)

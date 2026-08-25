@@ -196,6 +196,11 @@ Contoh REST per simbol: `GET /api/v1/markets` (registry instrumen + status sesi)
 | `XBMAP_TELEGRAM_CHAT_ID` | kosong | Chat tujuan pengiriman alert |
 | `XBMAP_DERIVATIVES_POLL_MS` | `30000` | Interval polling funding/open interest |
 | `XBMAP_LIQUIDATIONS` | `0` | `1` = aktifkan feed likuidasi (review lisensi dulu) |
+| `XBMAP_REQUIRE_AUTH` | `0` | `1` = wajibkan login untuk `/api/v1/*` dan WebSocket |
+| `XBMAP_ADMIN_USERNAME` | `admin` | Username bootstrap saat auth aktif |
+| `XBMAP_ADMIN_PASSWORD` | kosong | Password admin (wajib jika auth diaktifkan) |
+| `XBMAP_SESSION_TTL_MS` | `604800000` | Usia sesi login (sliding) |
+| `XBMAP_ADMIN_TOKEN` | kosong | Token untuk `/metrics` & `/api/v1/observability/*` (set di produksi!) |
 | `XBMAP_CAPTURE_DIR` | kosong/nonaktif | Direktori privat untuk raw public-feed capture gzip |
 | `XBMAP_CAPTURE_QUEUE_RECORDS` | `8192` | Batas jumlah record yang menunggu ditulis |
 | `XBMAP_CAPTURE_QUEUE_BYTES` | `16777216` | Batas byte antrean recorder |
@@ -222,6 +227,17 @@ XBMAP_CAPTURE_DIR=.liquidmap-captures npm run dev:server
 Capture dapat berisi data pasar berlisensi. Simpan di volume privat, jangan
 commit ke repository, dan pastikan hak penyimpanan/redistribusi sebelum dipakai
 di luar pengujian internal.
+
+## Keamanan
+
+- `Content-Security-Policy` ketat (`script-src 'self'`, tanpa inline) plus
+  `X-Frame-Options`/`nosniff`/`Referrer-Policy` di semua respons.
+- Set `XBMAP_ADMIN_TOKEN` di produksi untuk melindungi `/metrics`,
+  `/api/v1/observability/alerts`, dan `/api/v1/observability/incidents`
+  (header `x-admin-token` atau `Authorization: Bearer`).
+- Aktifkan auth sesi dengan `XBMAP_REQUIRE_AUTH=1` + `XBMAP_ADMIN_PASSWORD`:
+  semua `/api/v1/*` (kecuali health) dan upgrade WebSocket menuntut login;
+  cookie `xbmap_session` httpOnly/SameSite=Lax dengan kedaluwarsa sliding.
 
 ## Arsitektur
 

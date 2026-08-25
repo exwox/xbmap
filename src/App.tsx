@@ -15,6 +15,8 @@ import {
 } from './components/SettingsPanel';
 import { TrendPanel } from './components/TrendPanel';
 import { AlertsPanel } from './components/AlertsPanel';
+import { LoginGate } from './components/LoginGate';
+import { fetchAuthStatus } from './lib/authApi';
 import { createDemoReplay } from './demoReplay';
 import { fetchReplayCapture } from './lib/replayApi';
 import {
@@ -107,6 +109,9 @@ function App() {
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [watchlist, setWatchlist] = useState<string[]>(loadWatchlist);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [authRequiredState, setAuthRequiredState] = useState(false);
+  const [authedState, setAuthedState] = useState(false);
   const chartPanelRef = useRef<HTMLElement>(null);
   const [rendererBenchmarkNow, setRendererBenchmarkNow] = useState(Date.now);
   const rendererBenchmarkData = useMemo(
@@ -182,6 +187,24 @@ function App() {
     const timer = window.setTimeout(() => setToast(null), 4_000);
     return () => window.clearTimeout(timer);
   }, [toast]);
+
+  // Phase 6: probe the gateway once. When enforcement is enabled and no
+  // valid session exists, the login gate replaces the terminal.
+  useEffect(() => {
+    void (async () => {
+      try {
+        const status = await fetchAuthStatus();
+        setAuthRequiredState(status.required);
+        setAuthedState(status.authenticated);
+      } catch {
+        // Gateway unreachable: fall through and let the dashboard surface
+        // the connection problem instead of blocking on a blank screen.
+        setAuthRequiredState(false);
+        setAuthedState(true);
+      }
+      setAuthChecked(true);
+    })();
+  }, []);
 
   const latestDepth = market.depthFrames.at(-1);
   const latestPricePoint = market.priceSeries.at(-1);
@@ -356,6 +379,17 @@ function App() {
       ? 'connecting'
       : '';
   const confidencePercent = (validatedMarketTrend?.confidence ?? 0) * 100;
+
+  if (!authChecked) {
+    return <div className="login-shell" aria-busy="true" />;
+  }
+  if (authRequiredState && !authedState) {
+    return (
+      <div className="login-shell">
+        <LoginGate onSuccess={() => setAuthedState(true)} />
+      </div>
+    );
+  }
 
   return (
     <div className="app-shell">
