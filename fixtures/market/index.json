@@ -1,0 +1,64 @@
+{
+  "deterministic": true,
+  "fixtureSchemaVersion": 1,
+  "fixtureSet": "phase-0-market-regression",
+  "generatorVersion": "1.0.0",
+  "scenarios": [
+    {
+      "data": "calm.events.jsonl",
+      "dataSha256": "d8a57e05eebb8c84b0cb5f5546d6830f4d7706d03aaefea14c201b2ed089a660",
+      "eventCount": 28,
+      "id": "calm",
+      "manifest": "calm.manifest.json",
+      "manifestSha256": "e2242810a3288bfe84939e8542c8158a5e442433f186959439a30cb42186cdbc",
+      "tags": [
+        "calm",
+        "balanced-flow",
+        "neutral-trend"
+      ]
+    },
+    {
+      "data": "strong-uptrend.events.jsonl",
+      "dataSha256": "04c674d6d058f4f8698719f40cd7eaf7698a693c9dae5d4aa5517786a2b554ab",
+      "eventCount": 24,
+      "id": "strong-uptrend",
+      "manifest": "strong-uptrend.manifest.json",
+      "manifestSha256": "53f4bcc1b9ce2d8a37fb7abc8bb8a6731daf8e0419b0b725929b4aa33527a401",
+      "tags": [
+        "trend",
+        "bullish",
+        "breakout",
+        "signal-confirmation"
+      ]
+    },
+    {
+      "data": "high-volatility.events.jsonl",
+      "dataSha256": "be1754db0bfcab93d78443449ba7270f031b1472800b8e2764227161e9153bba",
+      "eventCount": 44,
+      "id": "high-volatility",
+      "manifest": "high-volatility.manifest.json",
+      "manifestSha256": "de86cbc24566720e2a14c5e07631407e39789361672861552d9b8da83f161459",
+      "tags": [
+        "volatile",
+        "whipsaw",
+        "alternating-flow",
+        "hysteresis"
+      ]
+    },
+    {
+      "data": "reconnect-sequence-gap.events.jsonl",
+      "dataSha256": "37b23103242eeb6f64e9570c481a47cec3500c0cf74fb887124dc4e83bb37b07",
+      "eventCount": 18,
+      "id": "reconnect-sequence-gap",
+      "manifest": "reconnect-sequence-gap.manifest.json",
+      "manifestSha256": "ca24702cd8f18d2e992cb8da0c0993e546295f0af435322e8f780cfeac7af6d2",
+      "tags": [
+        "reconnect",
+        "sequence-gap",
+        "duplicate",
+        "resync",
+        "data-quality"
+      ]
+    }
+  ]
+}

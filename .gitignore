@@ -1,0 +1,11 @@
+node_modules
+dist
+.env
+.env.*
+!.env.example
+coverage
+*.log
+.liquidmap-captures/
+.liquidmap-history/
+.liquidmap-backups/
+.DS_Store

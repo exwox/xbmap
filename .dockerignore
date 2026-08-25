@@ -1,0 +1,12 @@
+node_modules
+dist
+.git
+.agents
+.codex
+coverage
+*.log
+.liquidmap-captures
+.liquidmap-history
+.liquidmap-backups
+.env
+.DS_Store

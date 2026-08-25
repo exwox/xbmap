@@ -1,0 +1,715 @@
+{
+  "benchmarkSchemaVersion": 1,
+  "benchmarkKind": "offline-deterministic-synthetic",
+  "generatedAt": "2026-08-24T14:17:39.115Z",
+  "invocation": "node --expose-gc --import tsx scripts/bench/run.ts --profile baseline --seed 1480744257 --json docs/baselines/phase-0-synthetic-benchmark.json --markdown docs/baselines/phase-0-synthetic-benchmark.md",
+  "seed": 1480744257,
+  "profile": "baseline",
+  "environment": {
+    "hostname": "HP-348-G4",
+    "platform": "linux",
+    "release": "7.0.0-30-generic",
+    "architecture": "x64",
+    "nodeVersion": "v24.19.0",
+    "v8Version": "13.6.233.17-node.51",
+    "tsxVersion": "4.23.12",
+    "typescriptVersion": "5.9.3",
+    "executablePath": "/home/exwox/.nvm/versions/node/v24.19.0/bin/node",
+    "nodeExecArguments": [
+      "--expose-gc",
+      "--import",
+      "tsx"
+    ],
+    "processArguments": [
+      "/home/exwox/Documents/docker/xbmap/scripts/bench/run.ts",
+      "--profile",
+      "baseline",
+      "--seed",
+      "1480744257",
+      "--json",
+      "docs/baselines/phase-0-synthetic-benchmark.json",
+      "--markdown",
+      "docs/baselines/phase-0-synthetic-benchmark.md"
+    ],
+    "cpuModel": "Intel(R) Core(TM) i7-7500U CPU @ 2.70GHz",
+    "logicalCpuCount": 4,
+    "cpuSpeedMHzReported": 3028,
+    "totalMemoryBytes": 7567171584,
+    "freeMemoryBytesAtReport": 3305197568,
+    "cgroupCpuMax": null,
+    "cgroupMemoryMax": null,
+    "cgroupMemoryCurrent": null,
+    "timezone": "Asia/Jakarta",
+    "gcExposed": true,
+    "repositoryRevision": "unavailable (.git revision metadata not mounted)",
+    "sourceFingerprintSha256": "2310f028ef8e1ad9447817b47ec260918dd7a505738135fcee260a101c8bf019",
+    "sourceFingerprintFiles": [
+      "package-lock.json",
+      "scripts/bench/run.ts",
+      "server/core/analytics.ts",
+      "server/core/orderBook.ts",
+      "server/core/ringBuffer.ts",
+      "server/core/tradeAggregator.ts",
+      "server/httpServer.ts",
+      "server/marketGateway.ts",
+      "server/types.ts",
+      "src/App.tsx",
+      "src/components/MarketHeatmap.tsx",
+      "src/components/heatmap/draw.ts",
+      "src/lib/marketDataClient.ts",
+      "src/lib/marketNormalization.ts",
+      "src/lib/useMarketData.ts"
+    ]
+  },
+  "configuration": {
+    "rounds": 3,
+    "orderBookWarmup": 10000,
+    "orderBookIterations": 100000,
+    "orderBookLatencySamples": 10000,
+    "analyticsTradeHistory": 30000,
+    "analyticsWarmup": 20,
+    "analyticsIterations": 300,
+    "analyticsLatencySamples": 200,
+    "gatewayWarmupCycles": 25,
+    "gatewayCycles": 300,
+    "gatewayLatencySamples": 150,
+    "clientWarmup": 2000,
+    "clientIterations": 20000,
+    "clientLatencySamples": 5000
+  },
+  "results": {
+    "orderBook": {
+      "name": "order_book_apply_delta_8_levels",
+      "syntheticWorkload": "200 levels/side; each sequenced delta changes 4 bid and 4 ask levels",
+      "operationUnit": "depth updates",
+      "rounds": [
+        {
+          "round": 1,
+          "operations": 100000,
+          "wallMs": 691.607,
+          "operationsPerSecond": 144590.827,
+          "cpuUserMs": 746.346,
+          "cpuSystemMs": 18.296,
+          "cpuTotalMs": 764.642,
+          "cpuUtilizationPercent": 110.56,
+          "memory": {
+            "startRssBytes": 95789056,
+            "endRssBytes": 104034304,
+            "peakRssBytes": 104034304,
+            "rssDeltaBytes": 8245248,
+            "startHeapUsedBytes": 9378568,
+            "endHeapUsedBytes": 14020560,
+            "peakHeapUsedBytes": 17754784,
+            "heapDeltaBytes": 4641992,
+            "retainedHeapDeltaAfterGcBytes": -4232
+          }
+        },
+        {
+          "round": 2,
+          "operations": 100000,
+          "wallMs": 670.766,
+          "operationsPerSecond": 149083.298,
+          "cpuUserMs": 704.87,
+          "cpuSystemMs": 2.991,
+          "cpuTotalMs": 707.861,
+          "cpuUtilizationPercent": 105.53,
+          "memory": {
+            "startRssBytes": 104079360,
+            "endRssBytes": 104046592,
+            "peakRssBytes": 104263680,
+            "rssDeltaBytes": -32768,
+            "startHeapUsedBytes": 9366312,
+            "endHeapUsedBytes": 15413304,
+            "peakHeapUsedBytes": 17749912,
+            "heapDeltaBytes": 6046992,
+            "retainedHeapDeltaAfterGcBytes": 29560
+          }
+        },
+        {
+          "round": 3,
+          "operations": 100000,
+          "wallMs": 665.138,
+          "operationsPerSecond": 150344.734,
+          "cpuUserMs": 703.969,
+          "cpuSystemMs": 2.094,
+          "cpuTotalMs": 706.063,
+          "cpuUtilizationPercent": 106.153,
+          "memory": {
+            "startRssBytes": 104046592,
+            "endRssBytes": 104124416,
+            "peakRssBytes": 107200512,
+            "rssDeltaBytes": 77824,
+            "startHeapUsedBytes": 9381320,
+            "endHeapUsedBytes": 10781360,
+            "peakHeapUsedBytes": 17780312,
+            "heapDeltaBytes": 1400040,
+            "retainedHeapDeltaAfterGcBytes": 42576
+          }
+        }
+      ],
+      "aggregate": {
+        "totalOperations": 300000,
+        "totalWallMs": 2027.511,
+        "operationsPerSecond": 147964.672,
+        "perRoundOperationsPerSecond": {
+          "min": 144590.827,
+          "median": 149083.298,
+          "mean": 148006.286,
+          "max": 150344.734,
+          "standardDeviation": 3024.372
+        },
+        "cpuUserMs": 2155.185,
+        "cpuSystemMs": 23.381,
+        "cpuTotalMs": 2178.566,
+        "cpuUtilizationPercent": 107.45,
+        "peakRssBytes": 107200512,
+        "peakHeapUsedBytes": 17780312,
+        "maximumRetainedHeapDeltaAfterGcBytes": 42576
+      },
+      "latency": {
+        "samples": 30000,
+        "unit": "microseconds",
+        "min": 4.429,
+        "p50": 5.152,
+        "p90": 10.883,
+        "p95": 12.184,
+        "p99": 24.332,
+        "max": 1017.832,
+        "mean": 7.193,
+        "standardDeviation": 11.706
+      }
+    },
+    "analytics": {
+      "name": "analytics_compute_full_ring",
+      "syntheticWorkload": "30000 trades in the 30s ring; 200 book levels/side",
+      "operationUnit": "analytics frames",
+      "rounds": [
+        {
+          "round": 1,
+          "operations": 300,
+          "wallMs": 2426.897,
+          "operationsPerSecond": 123.615,
+          "cpuUserMs": 2074.853,
+          "cpuSystemMs": 393.805,
+          "cpuTotalMs": 2468.658,
+          "cpuUtilizationPercent": 101.721,
+          "memory": {
+            "startRssBytes": 162344960,
+            "endRssBytes": 191135744,
+            "peakRssBytes": 199983104,
+            "rssDeltaBytes": 28790784,
+            "startHeapUsedBytes": 17893440,
+            "endHeapUsedBytes": 51256784,
+            "peakHeapUsedBytes": 79132408,
+            "heapDeltaBytes": 33363344,
+            "retainedHeapDeltaAfterGcBytes": 20880
+          }
+        },
+        {
+          "round": 2,
+          "operations": 300,
+          "wallMs": 2478.655,
+          "operationsPerSecond": 121.033,
+          "cpuUserMs": 2095.948,
+          "cpuSystemMs": 403.317,
+          "cpuTotalMs": 2499.265,
+          "cpuUtilizationPercent": 100.832,
+          "memory": {
+            "startRssBytes": 179060736,
+            "endRssBytes": 191483904,
+            "peakRssBytes": 211275776,
+            "rssDeltaBytes": 12423168,
+            "startHeapUsedBytes": 17916504,
+            "endHeapUsedBytes": 37461016,
+            "peakHeapUsedBytes": 83493352,
+            "heapDeltaBytes": 19544512,
+            "retainedHeapDeltaAfterGcBytes": 59816
+          }
+        },
+        {
+          "round": 3,
+          "operations": 300,
+          "wallMs": 2373.204,
+          "operationsPerSecond": 126.411,
+          "cpuUserMs": 1986.313,
+          "cpuSystemMs": 395.898,
+          "cpuTotalMs": 2382.211,
+          "cpuUtilizationPercent": 100.38,
+          "memory": {
+            "startRssBytes": 179126272,
+            "endRssBytes": 279830528,
+            "peakRssBytes": 286961664,
+            "rssDeltaBytes": 100704256,
+            "startHeapUsedBytes": 17985120,
+            "endHeapUsedBytes": 104260488,
+            "peakHeapUsedBytes": 132952400,
+            "heapDeltaBytes": 86275368,
+            "retainedHeapDeltaAfterGcBytes": 536
+          }
+        }
+      ],
+      "aggregate": {
+        "totalOperations": 900,
+        "totalWallMs": 7278.756,
+        "operationsPerSecond": 123.648,
+        "perRoundOperationsPerSecond": {
+          "min": 121.033,
+          "median": 123.615,
+          "mean": 123.686,
+          "max": 126.411,
+          "standardDeviation": 2.69
+        },
+        "cpuUserMs": 6157.114,
+        "cpuSystemMs": 1193.02,
+        "cpuTotalMs": 7350.134,
+        "cpuUtilizationPercent": 100.981,
+        "peakRssBytes": 286961664,
+        "peakHeapUsedBytes": 132952400,
+        "maximumRetainedHeapDeltaAfterGcBytes": 59816
+      },
+      "latency": {
+        "samples": 600,
+        "unit": "microseconds",
+        "min": 6071.878,
+        "p50": 7402.151,
+        "p90": 9674.333,
+        "p95": 11339.841,
+        "p99": 14268.076,
+        "max": 17906.32,
+        "mean": 7884.546,
+        "standardDeviation": 1666.941
+      }
+    },
+    "gateway": {
+      "name": "gateway_one_client_pipeline",
+      "syntheticWorkload": "per cycle: 10 depth deltas, 30 trades, one frame; one 80-level client JSON serialization",
+      "operationUnit": "100ms gateway cycles",
+      "rounds": [
+        {
+          "round": 1,
+          "operations": 300,
+          "wallMs": 493.373,
+          "operationsPerSecond": 608.059,
+          "cpuUserMs": 558.236,
+          "cpuSystemMs": 1.163,
+          "cpuTotalMs": 559.399,
+          "cpuUtilizationPercent": 113.383,
+          "memory": {
+            "startRssBytes": 264212480,
+            "endRssBytes": 264347648,
+            "peakRssBytes": 264736768,
+            "rssDeltaBytes": 135168,
+            "startHeapUsedBytes": 11356856,
+            "endHeapUsedBytes": 73014880,
+            "peakHeapUsedBytes": 84822128,
+            "heapDeltaBytes": 61658024,
+            "retainedHeapDeltaAfterGcBytes": 11695120
+          }
+        },
+        {
+          "round": 2,
+          "operations": 300,
+          "wallMs": 490.729,
+          "operationsPerSecond": 611.336,
+          "cpuUserMs": 540.619,
+          "cpuSystemMs": 3.617,
+          "cpuTotalMs": 544.236,
+          "cpuUtilizationPercent": 110.904,
+          "memory": {
+            "startRssBytes": 264413184,
+            "endRssBytes": 264519680,
+            "peakRssBytes": 264806400,
+            "rssDeltaBytes": 106496,
+            "startHeapUsedBytes": 11427384,
+            "endHeapUsedBytes": 67598832,
+            "peakHeapUsedBytes": 79937472,
+            "heapDeltaBytes": 56171448,
+            "retainedHeapDeltaAfterGcBytes": 11650208
+          }
+        },
+        {
+          "round": 3,
+          "operations": 300,
+          "wallMs": 433.884,
+          "operationsPerSecond": 691.428,
+          "cpuUserMs": 476.27,
+          "cpuSystemMs": 4.595,
+          "cpuTotalMs": 480.865,
+          "cpuUtilizationPercent": 110.828,
+          "memory": {
+            "startRssBytes": 264540160,
+            "endRssBytes": 264540160,
+            "peakRssBytes": 264540160,
+            "rssDeltaBytes": 0,
+            "startHeapUsedBytes": 11454272,
+            "endHeapUsedBytes": 67617496,
+            "peakHeapUsedBytes": 79951640,
+            "heapDeltaBytes": 56163224,
+            "retainedHeapDeltaAfterGcBytes": 11646528
+          }
+        }
+      ],
+      "aggregate": {
+        "totalOperations": 900,
+        "totalWallMs": 1417.986,
+        "operationsPerSecond": 634.703,
+        "perRoundOperationsPerSecond": {
+          "min": 608.059,
+          "median": 611.336,
+          "mean": 636.941,
+          "max": 691.428,
+          "standardDeviation": 47.216
+        },
+        "cpuUserMs": 1575.125,
+        "cpuSystemMs": 9.375,
+        "cpuTotalMs": 1584.5,
+        "cpuUtilizationPercent": 111.743,
+        "peakRssBytes": 264806400,
+        "peakHeapUsedBytes": 84822128,
+        "maximumRetainedHeapDeltaAfterGcBytes": 11695120
+      },
+      "latency": {
+        "samples": 450,
+        "unit": "microseconds",
+        "min": 378.721,
+        "p50": 878.572,
+        "p90": 1552.079,
+        "p95": 1967.133,
+        "p99": 3387.438,
+        "max": 4448.298,
+        "mean": 985.342,
+        "standardDeviation": 536.228
+      },
+      "workloadRates": {
+        "frameRateHz": 10,
+        "depthUpdatesPerSecond": 100,
+        "tradesPerSecond": 300,
+        "inputMarketEventsPerCycle": 40,
+        "totalInputMarketEvents": 12000,
+        "inputMarketEventsPerWallSecond": 25388.12
+      },
+      "emittedEventCounts": {
+        "depth_frame": 300,
+        "metric": 300,
+        "price": 578,
+        "trade_bucket": 600,
+        "trend_signal": 300
+      },
+      "clientFrameLoad": [
+        {
+          "depthLevelsPerSide": 20,
+          "modeledSeconds": 30,
+          "messagesPerSecond": 69.333333,
+          "jsonBytesPerSecond": 33038.467,
+          "webSocketBytesPerSecond": 33315.8,
+          "webSocketMegabitsPerSecond": 0.266526,
+          "oneOffSubscriptionSnapshotJsonBytes": 1015,
+          "oneOffSubscriptionSnapshotWebSocketBytes": 1019,
+          "byEventType": {
+            "depth_frame": {
+              "messagesPerSecond": 10,
+              "jsonBytesPerSecond": 11727.533,
+              "webSocketBytesPerSecond": 11767.533,
+              "meanJsonPayloadBytes": 1172.753,
+              "p95JsonPayloadBytes": 1264.1
+            },
+            "heartbeat": {
+              "messagesPerSecond": 0.066667,
+              "jsonBytesPerSecond": 14.8,
+              "webSocketBytesPerSecond": 15.067,
+              "meanJsonPayloadBytes": 222,
+              "p95JsonPayloadBytes": 222
+            },
+            "metric": {
+              "messagesPerSecond": 10,
+              "jsonBytesPerSecond": 4790.167,
+              "webSocketBytesPerSecond": 4830.167,
+              "meanJsonPayloadBytes": 479.017,
+              "p95JsonPayloadBytes": 496
+            },
+            "price": {
+              "messagesPerSecond": 19.266667,
+              "jsonBytesPerSecond": 4554.267,
+              "webSocketBytesPerSecond": 4631.333,
+              "meanJsonPayloadBytes": 236.381,
+              "p95JsonPayloadBytes": 242
+            },
+            "trade_bucket": {
+              "messagesPerSecond": 20,
+              "jsonBytesPerSecond": 8885.667,
+              "webSocketBytesPerSecond": 8965.667,
+              "meanJsonPayloadBytes": 444.283,
+              "p95JsonPayloadBytes": 475
+            },
+            "trend_signal": {
+              "messagesPerSecond": 10,
+              "jsonBytesPerSecond": 3066.033,
+              "webSocketBytesPerSecond": 3106.033,
+              "meanJsonPayloadBytes": 306.603,
+              "p95JsonPayloadBytes": 307
+            }
+          }
+        },
+        {
+          "depthLevelsPerSide": 80,
+          "modeledSeconds": 30,
+          "messagesPerSecond": 69.333333,
+          "jsonBytesPerSecond": 58073.967,
+          "webSocketBytesPerSecond": 58351.3,
+          "webSocketMegabitsPerSecond": 0.46681,
+          "oneOffSubscriptionSnapshotJsonBytes": 3363,
+          "oneOffSubscriptionSnapshotWebSocketBytes": 3367,
+          "byEventType": {
+            "depth_frame": {
+              "messagesPerSecond": 10,
+              "jsonBytesPerSecond": 36763.033,
+              "webSocketBytesPerSecond": 36803.033,
+              "meanJsonPayloadBytes": 3676.303,
+              "p95JsonPayloadBytes": 3899.05
+            },
+            "heartbeat": {
+              "messagesPerSecond": 0.066667,
+              "jsonBytesPerSecond": 14.8,
+              "webSocketBytesPerSecond": 15.067,
+              "meanJsonPayloadBytes": 222,
+              "p95JsonPayloadBytes": 222
+            },
+            "metric": {
+              "messagesPerSecond": 10,
+              "jsonBytesPerSecond": 4790.167,
+              "webSocketBytesPerSecond": 4830.167,
+              "meanJsonPayloadBytes": 479.017,
+              "p95JsonPayloadBytes": 496
+            },
+            "price": {
+              "messagesPerSecond": 19.266667,
+              "jsonBytesPerSecond": 4554.267,
+              "webSocketBytesPerSecond": 4631.333,
+              "meanJsonPayloadBytes": 236.381,
+              "p95JsonPayloadBytes": 242
+            },
+            "trade_bucket": {
+              "messagesPerSecond": 20,
+              "jsonBytesPerSecond": 8885.667,
+              "webSocketBytesPerSecond": 8965.667,
+              "meanJsonPayloadBytes": 444.283,
+              "p95JsonPayloadBytes": 475
+            },
+            "trend_signal": {
+              "messagesPerSecond": 10,
+              "jsonBytesPerSecond": 3066.033,
+              "webSocketBytesPerSecond": 3106.033,
+              "meanJsonPayloadBytes": 306.603,
+              "p95JsonPayloadBytes": 307
+            }
+          }
+        },
+        {
+          "depthLevelsPerSide": 200,
+          "modeledSeconds": 30,
+          "messagesPerSecond": 69.333333,
+          "jsonBytesPerSecond": 108010.133,
+          "webSocketBytesPerSecond": 108287.467,
+          "webSocketMegabitsPerSecond": 0.8663,
+          "oneOffSubscriptionSnapshotJsonBytes": 8265,
+          "oneOffSubscriptionSnapshotWebSocketBytes": 8269,
+          "byEventType": {
+            "depth_frame": {
+              "messagesPerSecond": 10,
+              "jsonBytesPerSecond": 86699.2,
+              "webSocketBytesPerSecond": 86739.2,
+              "meanJsonPayloadBytes": 8669.92,
+              "p95JsonPayloadBytes": 9032
+            },
+            "heartbeat": {
+              "messagesPerSecond": 0.066667,
+              "jsonBytesPerSecond": 14.8,
+              "webSocketBytesPerSecond": 15.067,
+              "meanJsonPayloadBytes": 222,
+              "p95JsonPayloadBytes": 222
+            },
+            "metric": {
+              "messagesPerSecond": 10,
+              "jsonBytesPerSecond": 4790.167,
+              "webSocketBytesPerSecond": 4830.167,
+              "meanJsonPayloadBytes": 479.017,
+              "p95JsonPayloadBytes": 496
+            },
+            "price": {
+              "messagesPerSecond": 19.266667,
+              "jsonBytesPerSecond": 4554.267,
+              "webSocketBytesPerSecond": 4631.333,
+              "meanJsonPayloadBytes": 236.381,
+              "p95JsonPayloadBytes": 242
+            },
+            "trade_bucket": {
+              "messagesPerSecond": 20,
+              "jsonBytesPerSecond": 8885.667,
+              "webSocketBytesPerSecond": 8965.667,
+              "meanJsonPayloadBytes": 444.283,
+              "p95JsonPayloadBytes": 475
+            },
+            "trend_signal": {
+              "messagesPerSecond": 10,
+              "jsonBytesPerSecond": 3066.033,
+              "webSocketBytesPerSecond": 3106.033,
+              "meanJsonPayloadBytes": 306.603,
+              "p95JsonPayloadBytes": 307
+            }
+          }
+        }
+      ],
+      "linearFanoutEstimate": [
+        {
+          "clients": 1,
+          "depthLevelsPerSide": 80,
+          "aggregateWebSocketMegabitsPerSecond": 0.46681
+        },
+        {
+          "clients": 10,
+          "depthLevelsPerSide": 80,
+          "aggregateWebSocketMegabitsPerSecond": 4.6681
+        },
+        {
+          "clients": 100,
+          "depthLevelsPerSide": 80,
+          "aggregateWebSocketMegabitsPerSecond": 46.681
+        }
+      ]
+    },
+    "clientWireDecode": {
+      "name": "client_wire_metadata_and_normalization",
+      "syntheticWorkload": "3533-byte JSON depth frame with 80 levels/side; metadata read plus normalization",
+      "operationUnit": "wire depth frames",
+      "rounds": [
+        {
+          "round": 1,
+          "operations": 20000,
+          "wallMs": 1847.564,
+          "operationsPerSecond": 10825.066,
+          "cpuUserMs": 1951.977,
+          "cpuSystemMs": 5.434,
+          "cpuTotalMs": 1957.411,
+          "cpuUtilizationPercent": 105.946,
+          "memory": {
+            "startRssBytes": 281554944,
+            "endRssBytes": 281415680,
+            "peakRssBytes": 283426816,
+            "rssDeltaBytes": -139264,
+            "startHeapUsedBytes": 22430936,
+            "endHeapUsedBytes": 53245176,
+            "peakHeapUsedBytes": 86662032,
+            "heapDeltaBytes": 30814240,
+            "retainedHeapDeltaAfterGcBytes": 68592
+          }
+        },
+        {
+          "round": 2,
+          "operations": 20000,
+          "wallMs": 1817.051,
+          "operationsPerSecond": 11006.844,
+          "cpuUserMs": 1874.948,
+          "cpuSystemMs": 0.327,
+          "cpuTotalMs": 1875.275,
+          "cpuUtilizationPercent": 103.204,
+          "memory": {
+            "startRssBytes": 280825856,
+            "endRssBytes": 281096192,
+            "peakRssBytes": 283500544,
+            "rssDeltaBytes": 270336,
+            "startHeapUsedBytes": 22486432,
+            "endHeapUsedBytes": 53003608,
+            "peakHeapUsedBytes": 86183608,
+            "heapDeltaBytes": 30517176,
+            "retainedHeapDeltaAfterGcBytes": 9760
+          }
+        },
+        {
+          "round": 3,
+          "operations": 20000,
+          "wallMs": 1783.167,
+          "operationsPerSecond": 11215.998,
+          "cpuUserMs": 1833.913,
+          "cpuSystemMs": 4.412,
+          "cpuTotalMs": 1838.325,
+          "cpuUtilizationPercent": 103.093,
+          "memory": {
+            "startRssBytes": 281096192,
+            "endRssBytes": 280428544,
+            "peakRssBytes": 283959296,
+            "rssDeltaBytes": -667648,
+            "startHeapUsedBytes": 22496232,
+            "endHeapUsedBytes": 51405088,
+            "peakHeapUsedBytes": 88458248,
+            "heapDeltaBytes": 28908856,
+            "retainedHeapDeltaAfterGcBytes": 360
+          }
+        }
+      ],
+      "aggregate": {
+        "totalOperations": 60000,
+        "totalWallMs": 5447.782,
+        "operationsPerSecond": 11013.657,
+        "perRoundOperationsPerSecond": {
+          "min": 10825.066,
+          "median": 11006.844,
+          "mean": 11015.969,
+          "max": 11215.998,
+          "standardDeviation": 195.626
+        },
+        "cpuUserMs": 5660.838,
+        "cpuSystemMs": 10.173,
+        "cpuTotalMs": 5671.011,
+        "cpuUtilizationPercent": 104.098,
+        "peakRssBytes": 283959296,
+        "peakHeapUsedBytes": 88458248,
+        "maximumRetainedHeapDeltaAfterGcBytes": 68592
+      },
+      "latency": {
+        "samples": 15000,
+        "unit": "microseconds",
+        "min": 73.359,
+        "p50": 75.582,
+        "p90": 125.717,
+        "p95": 159.742,
+        "p99": 177.181,
+        "max": 747.479,
+        "mean": 87.704,
+        "standardDeviation": 28.441
+      }
+    }
+  },
+  "audit": {
+    "productionPathsExercised": [
+      "server/core/orderBook.ts: OrderBook.loadSnapshot/applyUpdate",
+      "server/core/analytics.ts: AnalyticsEngine.onTrade/compute and TrendDetector",
+      "server/marketGateway.ts: processSnapshot/processDepth/processTrade/emitFrame",
+      "server/httpServer.ts behavior replicated: per-client depth trim + JSON.stringify",
+      "src/lib/marketNormalization.ts: readWireEnvelopeMetadata + normalizeMarketEvent"
+    ],
+    "observations": [
+      "OrderBook.applyUpdate performs crossed-book validation by scanning both maps for best prices on every accepted delta.",
+      "OrderBook.getLevels sorts complete maps; each gateway frame calls it for depth output and analytics imbalance calls it again.",
+      "AnalyticsEngine.compute copies and filters the full trade ring and copies the full CVD ring on every frame; volume ratio also builds and sorts temporary collections.",
+      "The gateway builds 200 levels/side before the WebSocket layer trims each client independently; JSON serialization is repeated for every client.",
+      "The browser transport parses each string envelope once for sequence metadata and again during normalization.",
+      "The app retains up to 1,800 depth frames and exposes a fresh RingBuffer array on every depth event; at 80 levels/side that is up to 288,000 retained level objects traversed by heatmap preparation/drawing.",
+      "Canvas work is requestAnimationFrame-scheduled, but a new data reference schedules redraws at the 10 Hz gateway frame rate; actual FPS still depends on viewport, DPR, browser, and device."
+    ],
+    "gapsNotMeasured": [
+      "Real Binance event rates in quiet, trending, and volatile periods",
+      "Exchange-to-gateway, gateway-to-browser, and event-to-screen network latency",
+      "Browser Canvas FPS and main-thread long tasks on the minimum supported device",
+      "Actual WebSocket fanout CPU, kernel socket buffers, TLS, proxies, packet overhead, and slow clients",
+      "Long-running RSS/heap behavior, garbage-collection pauses, reconnect, and sequence-gap recovery"
+    ]
+  },
+  "caveats": [
+    "Every measured market event is deterministic and synthetic; no external network or exchange connection is used.",
+    "Throughput is a saturation result on one Node.js process, not a production capacity promise.",
+    "Latency is synchronous processing time, not event-to-screen latency; per-operation timing uses process.hrtime.bigint().",
+    "WebSocket byte estimates include uncompressed JSON payload and the server-to-client WebSocket frame header only.",
+    "Fanout bandwidth is a linear estimate; the harness does not create sockets or measure per-client send CPU.",
+    "Compare regressions only with the same profile, seed, runtime flags, machine allocation, and similarly idle host."
+  ]
+}

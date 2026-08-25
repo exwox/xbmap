@@ -1,0 +1,306 @@
+{
+  "capture": {
+    "durationMs": 8500,
+    "eventCount": 24,
+    "eventCounts": {
+      "checkpoint": 3,
+      "depth": 3,
+      "snapshot": 1,
+      "status": 1,
+      "trade": 16
+    },
+    "from": 1735693200000,
+    "to": 1735693208500
+  },
+  "data": {
+    "bytes": 5471,
+    "encoding": "utf-8",
+    "format": "ndjson",
+    "lines": 24,
+    "path": "strong-uptrend.events.jsonl",
+    "sha256": "04c674d6d058f4f8698719f40cd7eaf7698a693c9dae5d4aa5517786a2b554ab"
+  },
+  "description": "Price breakout, buy delta, rising CVD, bid imbalance, and elevated volume align.",
+  "eventSchemaVersion": 1,
+  "expected": {
+    "checkpoints": [
+      {
+        "at": 1735693208300,
+        "bookValid": true,
+        "lastUpdateId": 203,
+        "metric": {
+          "bestAsk": 64300.1,
+          "bestBid": 64299.9,
+          "buySellRatio": 48.2065,
+          "buyVolume": 15.025919,
+          "cvd": 14.74422,
+          "delta": 14.71422,
+          "imbalance": 0.84,
+          "lastPrice": 64300.1,
+          "latencyMs": 197,
+          "momentumMedium": 0.0046875,
+          "momentumShort": 0.0039048,
+          "sellVolume": 0.311699,
+          "spread": 0.19999999999708962,
+          "stale": false,
+          "tradeRate": 2.4,
+          "volumeRatio": 34.0836
+        },
+        "name": "uptrend-confirmation-1",
+        "trend": {
+          "active": false,
+          "confidence": 0.853,
+          "direction": "up",
+          "downScore": 15,
+          "reasons": [
+            "Positive price momentum",
+            "Buy volume delta",
+            "CVD rising",
+            "Bid liquidity imbalance",
+            "Elevated trade activity",
+            "Local high breakout"
+          ],
+          "score": 89,
+          "since": null,
+          "strength": "very_strong",
+          "upScore": 89
+        }
+      },
+      {
+        "at": 1735693208400,
+        "bookValid": true,
+        "lastUpdateId": 203,
+        "metric": {
+          "bestAsk": 64300.1,
+          "bestBid": 64299.9,
+          "buySellRatio": 48.2065,
+          "buyVolume": 15.025919,
+          "cvd": 14.74422,
+          "delta": 14.71422,
+          "imbalance": 0.84,
+          "lastPrice": 64300.1,
+          "latencyMs": 297,
+          "momentumMedium": 0.0046875,
+          "momentumShort": 0.0039048,
+          "sellVolume": 0.311699,
+          "spread": 0.19999999999708962,
+          "stale": false,
+          "tradeRate": 2.4,
+          "volumeRatio": 34.0836
+        },
+        "name": "uptrend-confirmation-2",
+        "trend": {
+          "active": false,
+          "confidence": 0.853,
+          "direction": "up",
+          "downScore": 15,
+          "reasons": [
+            "Positive price momentum",
+            "Buy volume delta",
+            "CVD rising",
+            "Bid liquidity imbalance",
+            "Elevated trade activity",
+            "Local high breakout"
+          ],
+          "score": 89,
+          "since": null,
+          "strength": "very_strong",
+          "upScore": 89
+        }
+      },
+      {
+        "at": 1735693208500,
+        "bookValid": true,
+        "lastUpdateId": 203,
+        "metric": {
+          "bestAsk": 64300.1,
+          "bestBid": 64299.9,
+          "buySellRatio": 48.2065,
+          "buyVolume": 15.025919,
+          "cvd": 14.74422,
+          "delta": 14.71422,
+          "imbalance": 0.84,
+          "lastPrice": 64300.1,
+          "latencyMs": 397,
+          "momentumMedium": 0.0046875,
+          "momentumShort": 0.0039048,
+          "sellVolume": 0.311699,
+          "spread": 0.19999999999708962,
+          "stale": false,
+          "tradeRate": 2.4,
+          "volumeRatio": 34.0836
+        },
+        "name": "uptrend-confirmed",
+        "trend": {
+          "active": true,
+          "confidence": 0.853,
+          "direction": "up",
+          "downScore": 15,
+          "reasons": [
+            "Positive price momentum",
+            "Buy volume delta",
+            "CVD rising",
+            "Bid liquidity imbalance",
+            "Elevated trade activity",
+            "Local high breakout"
+          ],
+          "score": 89,
+          "since": 1735693208500,
+          "strength": "very_strong",
+          "upScore": 89
+        }
+      }
+    ],
+    "connection": {
+      "gapDetected": false,
+      "recoveredAfterGap": false,
+      "states": [
+        {
+          "at": 1735693200001,
+          "resyncCount": 0,
+          "stale": false,
+          "state": "live"
+        }
+      ]
+    },
+    "orderBook": {
+      "asks": [
+        [
+          64300.1,
+          0.944
+        ],
+        [
+          64300.2,
+          1.088
+        ],
+        [
+          64300.3,
+          1.232
+        ],
+        [
+          64300.4,
+          1.376
+        ],
+        [
+          64300.5,
+          1.52
+        ]
+      ],
+      "bestAsk": 64300.1,
+      "bestBid": 64299.9,
+      "bids": [
+        [
+          64299.9,
+          10.856
+        ],
+        [
+          64299.8,
+          12.512
+        ],
+        [
+          64299.7,
+          14.168
+        ],
+        [
+          64299.6,
+          15.824
+        ],
+        [
+          64299.5,
+          17.48
+        ]
+      ],
+      "depth": 5,
+      "fingerprint": "sha256:72e2cd085647773946082e919dcfa5bb913b612edafded54ca6ff420d60a4d8e",
+      "imbalance": 0.84,
+      "midPrice": 64300,
+      "spread": 0.2
+    },
+    "sequence": {
+      "depthApplied": 3,
+      "depthGaps": 0,
+      "depthIgnored": 0,
+      "depthInvalid": 0,
+      "depthResults": [
+        {
+          "lastUpdateId": 201,
+          "ordinal": 7,
+          "sequenceEnd": 201,
+          "sequenceStart": 201,
+          "status": "applied"
+        },
+        {
+          "lastUpdateId": 202,
+          "ordinal": 13,
+          "sequenceEnd": 202,
+          "sequenceStart": 202,
+          "status": "applied"
+        },
+        {
+          "lastUpdateId": 203,
+          "ordinal": 18,
+          "sequenceEnd": 203,
+          "sequenceStart": 203,
+          "status": "applied"
+        }
+      ],
+      "depthUnsynced": 0,
+      "finalLastUpdateId": 203,
+      "resyncs": 0,
+      "snapshotsLoaded": 1
+    },
+    "trades": {
+      "buyCount": 12,
+      "buyVolume": 15.215919,
+      "count": 16,
+      "delta": 14.74422,
+      "firstPrice": 64000.1,
+      "highPrice": 64300.1,
+      "lastPrice": 64300.1,
+      "lowPrice": 64000,
+      "priceChangeBps": 46.8749,
+      "realizedVolatilityBps": 17.2524,
+      "sellCount": 4,
+      "sellVolume": 0.471699
+    },
+    "trend": {
+      "activatedDirections": [
+        "up"
+      ],
+      "directionTransitions": 0,
+      "finalActive": true,
+      "finalDirection": "up",
+      "finalScore": 89,
+      "maxDownScore": 15,
+      "maxUpScore": 89
+    }
+  },
+  "fixtureSchemaVersion": 1,
+  "generator": {
+    "name": "liquidmap-phase0-fixture-generator",
+    "seed": 1470103554,
+    "version": "1.0.0"
+  },
+  "id": "strong-uptrend",
+  "market": {
+    "exchange": "binance",
+    "priceBucketTicks": 1,
+    "product": "usd-m-perpetual",
+    "symbol": "BTCUSDT",
+    "tickSize": 0.1,
+    "timeBucketMs": 250,
+    "visibleDepth": 5
+  },
+  "provenance": {
+    "containsExchangeCapture": false,
+    "redistribution": "project-owned-generated-data",
+    "source": "synthetic"
+  },
+  "tags": [
+    "trend",
+    "bullish",
+    "breakout",
+    "signal-confirmation"
+  ],
+  "title": "Strong bullish trend"
+}

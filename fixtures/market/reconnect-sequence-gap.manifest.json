@@ -1,0 +1,309 @@
+{
+  "capture": {
+    "durationMs": 1400,
+    "eventCount": 18,
+    "eventCounts": {
+      "checkpoint": 3,
+      "depth": 4,
+      "snapshot": 2,
+      "status": 4,
+      "trade": 5
+    },
+    "from": 1735700400000,
+    "to": 1735700401400
+  },
+  "data": {
+    "bytes": 3748,
+    "encoding": "utf-8",
+    "format": "ndjson",
+    "lines": 18,
+    "path": "reconnect-sequence-gap.events.jsonl",
+    "sha256": "37b23103242eeb6f64e9570c481a47cec3500c0cf74fb887124dc4e83bb37b07"
+  },
+  "description": "A missing depth sequence invalidates the signal until a replacement snapshot bridges live updates.",
+  "eventSchemaVersion": 1,
+  "expected": {
+    "checkpoints": [
+      {
+        "at": 1735700400550,
+        "bookValid": true,
+        "lastUpdateId": 401,
+        "metric": {
+          "bestAsk": 64000.1,
+          "bestBid": 63999.9,
+          "buySellRatio": 1.7931,
+          "buyVolume": 0.52,
+          "cvd": 0.23,
+          "delta": 0.23,
+          "imbalance": 0.05321,
+          "lastPrice": 64000.1,
+          "latencyMs": 47,
+          "momentumMedium": 0,
+          "momentumShort": 0,
+          "sellVolume": 0.29,
+          "spread": 0.19999999999708962,
+          "stale": false,
+          "tradeRate": 0.6,
+          "volumeRatio": 1
+        },
+        "name": "before-sequence-gap",
+        "trend": {
+          "active": false,
+          "confidence": 0,
+          "direction": "neutral",
+          "downScore": 2,
+          "reasons": [],
+          "score": 8,
+          "since": null,
+          "strength": "neutral",
+          "upScore": 8
+        }
+      },
+      {
+        "at": 1735700400700,
+        "bookValid": false,
+        "lastUpdateId": 401,
+        "metric": {
+          "bestAsk": 64000.1,
+          "bestBid": 63999.9,
+          "buySellRatio": 1.7931,
+          "buyVolume": 0.52,
+          "cvd": 0.23,
+          "delta": 0.23,
+          "imbalance": 0.05321,
+          "lastPrice": 64000.1,
+          "latencyMs": 197,
+          "momentumMedium": 0,
+          "momentumShort": 0,
+          "sellVolume": 0.29,
+          "spread": 0.19999999999708962,
+          "stale": true,
+          "tradeRate": 0.6,
+          "volumeRatio": 1
+        },
+        "name": "signal-invalid-during-gap",
+        "trend": {
+          "active": false,
+          "confidence": 0,
+          "direction": "neutral",
+          "downScore": 0,
+          "reasons": [],
+          "score": 0,
+          "since": null,
+          "strength": "neutral",
+          "upScore": 0
+        }
+      },
+      {
+        "at": 1735700401400,
+        "bookValid": true,
+        "lastUpdateId": 406,
+        "metric": {
+          "bestAsk": 64001.1,
+          "bestBid": 64000.9,
+          "buySellRatio": 1.4286,
+          "buyVolume": 0.8,
+          "cvd": 0.24,
+          "delta": 0.24,
+          "imbalance": 0.10267,
+          "lastPrice": 64000.9,
+          "latencyMs": 97,
+          "momentumMedium": 0.0000125,
+          "momentumShort": 0.0000125,
+          "sellVolume": 0.56,
+          "spread": 0.19999999999708962,
+          "stale": false,
+          "tradeRate": 1,
+          "volumeRatio": 1
+        },
+        "name": "recovered-after-resync",
+        "trend": {
+          "active": false,
+          "confidence": 0,
+          "direction": "neutral",
+          "downScore": 2,
+          "reasons": [],
+          "score": 7,
+          "since": null,
+          "strength": "neutral",
+          "upScore": 7
+        }
+      }
+    ],
+    "connection": {
+      "gapDetected": true,
+      "recoveredAfterGap": true,
+      "states": [
+        {
+          "at": 1735700400001,
+          "resyncCount": 0,
+          "stale": false,
+          "state": "live"
+        },
+        {
+          "at": 1735700400601,
+          "resyncCount": 1,
+          "stale": false,
+          "state": "reconnecting"
+        },
+        {
+          "at": 1735700400900,
+          "resyncCount": 1,
+          "stale": false,
+          "state": "syncing"
+        },
+        {
+          "at": 1735700401001,
+          "resyncCount": 1,
+          "stale": false,
+          "state": "live"
+        }
+      ]
+    },
+    "orderBook": {
+      "asks": [
+        [
+          64001.1,
+          1.8
+        ],
+        [
+          64001.2,
+          1.36
+        ],
+        [
+          64001.3,
+          1.54
+        ],
+        [
+          64001.4,
+          1.72
+        ],
+        [
+          64001.5,
+          1.9
+        ]
+      ],
+      "bestAsk": 64001.1,
+      "bestBid": 64000.9,
+      "bids": [
+        [
+          64000.9,
+          2.4
+        ],
+        [
+          64000.8,
+          1.632
+        ],
+        [
+          64000.7,
+          1.848
+        ],
+        [
+          64000.6,
+          2.064
+        ],
+        [
+          64000.5,
+          2.28
+        ]
+      ],
+      "depth": 5,
+      "fingerprint": "sha256:0827675133ab2ac09fb0182790491f94d56bd6b88e4c3005364b423471f8f906",
+      "imbalance": 0.10267472,
+      "midPrice": 64001,
+      "spread": 0.2
+    },
+    "sequence": {
+      "depthApplied": 2,
+      "depthGaps": 1,
+      "depthIgnored": 1,
+      "depthInvalid": 0,
+      "depthResults": [
+        {
+          "lastUpdateId": 401,
+          "ordinal": 5,
+          "sequenceEnd": 401,
+          "sequenceStart": 401,
+          "status": "applied"
+        },
+        {
+          "lastUpdateId": 401,
+          "ordinal": 6,
+          "sequenceEnd": 401,
+          "sequenceStart": 401,
+          "status": "ignored"
+        },
+        {
+          "lastUpdateId": 401,
+          "ordinal": 9,
+          "sequenceEnd": 403,
+          "sequenceStart": 403,
+          "status": "gap"
+        },
+        {
+          "lastUpdateId": 406,
+          "ordinal": 15,
+          "sequenceEnd": 406,
+          "sequenceStart": 406,
+          "status": "applied"
+        }
+      ],
+      "depthUnsynced": 0,
+      "finalLastUpdateId": 406,
+      "resyncs": 1,
+      "snapshotsLoaded": 2
+    },
+    "trades": {
+      "buyCount": 3,
+      "buyVolume": 0.8,
+      "count": 5,
+      "delta": 0.24,
+      "firstPrice": 64000.1,
+      "highPrice": 64001.1,
+      "lastPrice": 64000.9,
+      "lowPrice": 63999.9,
+      "priceChangeBps": 0.125,
+      "realizedVolatilityBps": 0.1654,
+      "sellCount": 2,
+      "sellVolume": 0.56
+    },
+    "trend": {
+      "activatedDirections": [],
+      "directionTransitions": 0,
+      "finalActive": false,
+      "finalDirection": "neutral",
+      "finalScore": 7,
+      "maxDownScore": 2,
+      "maxUpScore": 8
+    }
+  },
+  "fixtureSchemaVersion": 1,
+  "generator": {
+    "name": "liquidmap-phase0-fixture-generator",
+    "seed": 1787822084,
+    "version": "1.0.0"
+  },
+  "id": "reconnect-sequence-gap",
+  "market": {
+    "exchange": "binance",
+    "priceBucketTicks": 1,
+    "product": "usd-m-perpetual",
+    "symbol": "BTCUSDT",
+    "tickSize": 0.1,
+    "timeBucketMs": 250,
+    "visibleDepth": 5
+  },
+  "provenance": {
+    "containsExchangeCapture": false,
+    "redistribution": "project-owned-generated-data",
+    "source": "synthetic"
+  },
+  "tags": [
+    "reconnect",
+    "sequence-gap",
+    "duplicate",
+    "resync",
+    "data-quality"
+  ],
+  "title": "Sequence gap and reconnect recovery"
+}

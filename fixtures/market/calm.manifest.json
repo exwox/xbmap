@@ -1,0 +1,282 @@
+{
+  "capture": {
+    "durationMs": 8800,
+    "eventCount": 28,
+    "eventCounts": {
+      "checkpoint": 2,
+      "depth": 8,
+      "snapshot": 1,
+      "status": 1,
+      "trade": 16
+    },
+    "from": 1735689600000,
+    "to": 1735689608800
+  },
+  "data": {
+    "bytes": 5830,
+    "encoding": "utf-8",
+    "format": "ndjson",
+    "lines": 28,
+    "path": "calm.events.jsonl",
+    "sha256": "d8a57e05eebb8c84b0cb5f5546d6830f4d7706d03aaefea14c201b2ed089a660"
+  },
+  "description": "Narrow spread, balanced aggressor flow, and low price movement.",
+  "eventSchemaVersion": 1,
+  "expected": {
+    "checkpoints": [
+      {
+        "at": 1735689604800,
+        "bookValid": true,
+        "lastUpdateId": 104,
+        "metric": {
+          "bestAsk": 64000.1,
+          "bestBid": 63999.9,
+          "buySellRatio": 0.9825,
+          "buyVolume": 0.555266,
+          "cvd": -0.009904,
+          "delta": -0.009904,
+          "imbalance": 0.00825,
+          "lastPrice": 63999.9,
+          "latencyMs": 347,
+          "momentumMedium": -0.0000031,
+          "momentumShort": -0.0000031,
+          "sellVolume": 0.56517,
+          "spread": 0.19999999999708962,
+          "stale": false,
+          "tradeRate": 1.6,
+          "volumeRatio": 1
+        },
+        "name": "calm-midpoint",
+        "trend": {
+          "active": false,
+          "confidence": 0,
+          "direction": "neutral",
+          "downScore": 3,
+          "reasons": [],
+          "score": 3,
+          "since": null,
+          "strength": "neutral",
+          "upScore": 2
+        }
+      },
+      {
+        "at": 1735689608800,
+        "bookValid": true,
+        "lastUpdateId": 108,
+        "metric": {
+          "bestAsk": 64000.1,
+          "bestBid": 63999.9,
+          "buySellRatio": 0.9937,
+          "buyVolume": 0.658592,
+          "cvd": -0.010801,
+          "delta": -0.004169,
+          "imbalance": 0.01841,
+          "lastPrice": 63999.9,
+          "latencyMs": 347,
+          "momentumMedium": -0.0000031,
+          "momentumShort": -0.0000031,
+          "sellVolume": 0.662761,
+          "spread": 0.19999999999708962,
+          "stale": false,
+          "tradeRate": 2,
+          "volumeRatio": 0.9378
+        },
+        "name": "calm-final",
+        "trend": {
+          "active": false,
+          "confidence": 0,
+          "direction": "neutral",
+          "downScore": 2,
+          "reasons": [],
+          "score": 2,
+          "since": null,
+          "strength": "neutral",
+          "upScore": 1
+        }
+      }
+    ],
+    "connection": {
+      "gapDetected": false,
+      "recoveredAfterGap": false,
+      "states": [
+        {
+          "at": 1735689600001,
+          "resyncCount": 0,
+          "stale": false,
+          "state": "live"
+        }
+      ]
+    },
+    "orderBook": {
+      "asks": [
+        [
+          64000.1,
+          1.744
+        ],
+        [
+          64000.2,
+          1.36
+        ],
+        [
+          64000.3,
+          1.54
+        ],
+        [
+          64000.4,
+          1.72
+        ],
+        [
+          64000.5,
+          1.9
+        ]
+      ],
+      "bestAsk": 64000.1,
+      "bestBid": 63999.9,
+      "bids": [
+        [
+          63999.9,
+          1.858
+        ],
+        [
+          63999.8,
+          1.401
+        ],
+        [
+          63999.7,
+          1.586
+        ],
+        [
+          63999.6,
+          1.772
+        ],
+        [
+          63999.5,
+          1.957
+        ]
+      ],
+      "depth": 5,
+      "fingerprint": "sha256:cf1e6dd6071207565fe911db30c63ff3dd541572c037689da31f886991cde82d",
+      "imbalance": 0.01841074,
+      "midPrice": 64000,
+      "spread": 0.2
+    },
+    "sequence": {
+      "depthApplied": 8,
+      "depthGaps": 0,
+      "depthIgnored": 0,
+      "depthInvalid": 0,
+      "depthResults": [
+        {
+          "lastUpdateId": 101,
+          "ordinal": 3,
+          "sequenceEnd": 101,
+          "sequenceStart": 101,
+          "status": "applied"
+        },
+        {
+          "lastUpdateId": 102,
+          "ordinal": 6,
+          "sequenceEnd": 102,
+          "sequenceStart": 102,
+          "status": "applied"
+        },
+        {
+          "lastUpdateId": 103,
+          "ordinal": 9,
+          "sequenceEnd": 103,
+          "sequenceStart": 103,
+          "status": "applied"
+        },
+        {
+          "lastUpdateId": 104,
+          "ordinal": 12,
+          "sequenceEnd": 104,
+          "sequenceStart": 104,
+          "status": "applied"
+        },
+        {
+          "lastUpdateId": 105,
+          "ordinal": 16,
+          "sequenceEnd": 105,
+          "sequenceStart": 105,
+          "status": "applied"
+        },
+        {
+          "lastUpdateId": 106,
+          "ordinal": 19,
+          "sequenceEnd": 106,
+          "sequenceStart": 106,
+          "status": "applied"
+        },
+        {
+          "lastUpdateId": 107,
+          "ordinal": 22,
+          "sequenceEnd": 107,
+          "sequenceStart": 107,
+          "status": "applied"
+        },
+        {
+          "lastUpdateId": 108,
+          "ordinal": 25,
+          "sequenceEnd": 108,
+          "sequenceStart": 108,
+          "status": "applied"
+        }
+      ],
+      "depthUnsynced": 0,
+      "finalLastUpdateId": 108,
+      "resyncs": 0,
+      "snapshotsLoaded": 1
+    },
+    "trades": {
+      "buyCount": 8,
+      "buyVolume": 1.073853,
+      "count": 16,
+      "delta": -0.010801,
+      "firstPrice": 64000.1,
+      "highPrice": 64000.1,
+      "lastPrice": 63999.9,
+      "lowPrice": 63999.9,
+      "priceChangeBps": -0.0312,
+      "realizedVolatilityBps": 0.121,
+      "sellCount": 8,
+      "sellVolume": 1.084654
+    },
+    "trend": {
+      "activatedDirections": [],
+      "directionTransitions": 0,
+      "finalActive": false,
+      "finalDirection": "neutral",
+      "finalScore": 2,
+      "maxDownScore": 3,
+      "maxUpScore": 2
+    }
+  },
+  "fixtureSchemaVersion": 1,
+  "generator": {
+    "name": "liquidmap-phase0-fixture-generator",
+    "seed": 211877889,
+    "version": "1.0.0"
+  },
+  "id": "calm",
+  "market": {
+    "exchange": "binance",
+    "priceBucketTicks": 1,
+    "product": "usd-m-perpetual",
+    "symbol": "BTCUSDT",
+    "tickSize": 0.1,
+    "timeBucketMs": 250,
+    "visibleDepth": 5
+  },
+  "provenance": {
+    "containsExchangeCapture": false,
+    "redistribution": "project-owned-generated-data",
+    "source": "synthetic"
+  },
+  "tags": [
+    "calm",
+    "balanced-flow",
+    "neutral-trend"
+  ],
+  "title": "Calm, balanced market"
+}

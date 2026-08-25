@@ -1,0 +1,439 @@
+{
+  "capture": {
+    "durationMs": 36500,
+    "eventCount": 44,
+    "eventCounts": {
+      "checkpoint": 6,
+      "depth": 6,
+      "snapshot": 1,
+      "status": 1,
+      "trade": 30
+    },
+    "from": 1735696800000,
+    "to": 1735696836500
+  },
+  "data": {
+    "bytes": 10086,
+    "encoding": "utf-8",
+    "format": "ndjson",
+    "lines": 44,
+    "path": "high-volatility.events.jsonl",
+    "sha256": "be1754db0bfcab93d78443449ba7270f031b1472800b8e2764227161e9153bba"
+  },
+  "description": "Large alternating price and flow impulses exercise signal hysteresis without a sustained trend.",
+  "eventSchemaVersion": 1,
+  "expected": {
+    "checkpoints": [
+      {
+        "at": 1735696801500,
+        "bookValid": true,
+        "lastUpdateId": 301,
+        "metric": {
+          "bestAsk": 64400.1,
+          "bestBid": 64399.9,
+          "buySellRatio": 43.1103,
+          "buyVolume": 15.373687,
+          "cvd": 15.017074,
+          "delta": 15.017074,
+          "imbalance": 0.76871,
+          "lastPrice": 64400.1,
+          "latencyMs": 117,
+          "momentumMedium": 0.0046817,
+          "momentumShort": 0.0046817,
+          "sellVolume": 0.356613,
+          "spread": 0.19999999999708962,
+          "stale": false,
+          "tradeRate": 1,
+          "volumeRatio": 1
+        },
+        "name": "volatility-wave-1",
+        "trend": {
+          "active": false,
+          "confidence": 0.507,
+          "direction": "up",
+          "downScore": 2,
+          "reasons": [
+            "Positive price momentum",
+            "Buy volume delta",
+            "CVD rising",
+            "Bid liquidity imbalance"
+          ],
+          "score": 63,
+          "since": null,
+          "strength": "strong",
+          "upScore": 63
+        }
+      },
+      {
+        "at": 1735696808500,
+        "bookValid": true,
+        "lastUpdateId": 302,
+        "metric": {
+          "bestAsk": 63500.1,
+          "bestBid": 63499.9,
+          "buySellRatio": 0.0234,
+          "buyVolume": 0.362008,
+          "cvd": -0.064714,
+          "delta": -15.081788,
+          "imbalance": -0.76871,
+          "lastPrice": 63499.9,
+          "latencyMs": 117,
+          "momentumMedium": -0.0093619,
+          "momentumShort": -0.0105197,
+          "sellVolume": 15.443796,
+          "spread": 0.19999999999708962,
+          "stale": false,
+          "tradeRate": 1,
+          "volumeRatio": 1
+        },
+        "name": "volatility-wave-2",
+        "trend": {
+          "active": false,
+          "confidence": 0.587,
+          "direction": "down",
+          "downScore": 69,
+          "reasons": [
+            "Negative price momentum",
+            "Sell volume delta",
+            "Ask liquidity imbalance",
+            "Local low breakout"
+          ],
+          "score": 69,
+          "since": null,
+          "strength": "strong",
+          "upScore": 2
+        }
+      },
+      {
+        "at": 1735696815500,
+        "bookValid": true,
+        "lastUpdateId": 303,
+        "metric": {
+          "bestAsk": 64600.1,
+          "bestBid": 64599.9,
+          "buySellRatio": 41.948,
+          "buyVolume": 15.426268,
+          "cvd": 14.993807,
+          "delta": 15.058521,
+          "imbalance": 0.76871,
+          "lastPrice": 64600.1,
+          "latencyMs": 117,
+          "momentumMedium": 0.0078019,
+          "momentumShort": 0.0129377,
+          "sellVolume": 0.367747,
+          "spread": 0.19999999999708962,
+          "stale": false,
+          "tradeRate": 1,
+          "volumeRatio": 1
+        },
+        "name": "volatility-wave-3",
+        "trend": {
+          "active": false,
+          "confidence": 0.587,
+          "direction": "up",
+          "downScore": 2,
+          "reasons": [
+            "Positive price momentum",
+            "Buy volume delta",
+            "Bid liquidity imbalance",
+            "Local high breakout"
+          ],
+          "score": 69,
+          "since": null,
+          "strength": "strong",
+          "upScore": 69
+        }
+      },
+      {
+        "at": 1735696822500,
+        "bookValid": true,
+        "lastUpdateId": 304,
+        "metric": {
+          "bestAsk": 63400.1,
+          "bestBid": 63399.9,
+          "buySellRatio": 0.0243,
+          "buyVolume": 0.367104,
+          "cvd": 0.229739,
+          "delta": -14.764068,
+          "imbalance": -0.76871,
+          "lastPrice": 63399.9,
+          "latencyMs": 117,
+          "momentumMedium": -0.010922,
+          "momentumShort": -0.0139984,
+          "sellVolume": 15.131172,
+          "spread": 0.19999999999708962,
+          "stale": false,
+          "tradeRate": 1,
+          "volumeRatio": 0.1963
+        },
+        "name": "volatility-wave-4",
+        "trend": {
+          "active": false,
+          "confidence": 0.56,
+          "direction": "down",
+          "downScore": 67,
+          "reasons": [
+            "Negative price momentum",
+            "Sell volume delta",
+            "Ask liquidity imbalance",
+            "Local low breakout"
+          ],
+          "score": 67,
+          "since": null,
+          "strength": "strong",
+          "upScore": 0
+        }
+      },
+      {
+        "at": 1735696829500,
+        "bookValid": true,
+        "lastUpdateId": 305,
+        "metric": {
+          "bestAsk": 64700.1,
+          "bestBid": 64699.9,
+          "buySellRatio": 41.9421,
+          "buyVolume": 15.298869,
+          "cvd": 15.163846,
+          "delta": 14.934107,
+          "imbalance": 0.76871,
+          "lastPrice": 64700.1,
+          "latencyMs": 117,
+          "momentumMedium": 0.0093619,
+          "momentumShort": 0.0153017,
+          "sellVolume": 0.364762,
+          "spread": 0.19999999999708962,
+          "stale": false,
+          "tradeRate": 1,
+          "volumeRatio": 0.1983
+        },
+        "name": "volatility-wave-5",
+        "trend": {
+          "active": false,
+          "confidence": 0.56,
+          "direction": "up",
+          "downScore": 0,
+          "reasons": [
+            "Positive price momentum",
+            "Buy volume delta",
+            "Bid liquidity imbalance",
+            "Local high breakout"
+          ],
+          "score": 67,
+          "since": null,
+          "strength": "strong",
+          "upScore": 67
+        }
+      },
+      {
+        "at": 1735696836500,
+        "bookValid": true,
+        "lastUpdateId": 306,
+        "metric": {
+          "bestAsk": 63300.1,
+          "bestBid": 63299.9,
+          "buySellRatio": 0.0253,
+          "buyVolume": 0.386969,
+          "cvd": 0.227171,
+          "delta": -14.936675,
+          "imbalance": -0.76871,
+          "lastPrice": 63299.9,
+          "latencyMs": 117,
+          "momentumMedium": -0.0136362,
+          "momentumShort": -0.0163186,
+          "sellVolume": 15.323644,
+          "spread": 0.19999999999708962,
+          "stale": false,
+          "tradeRate": 1,
+          "volumeRatio": 0.1989
+        },
+        "name": "volatility-wave-6",
+        "trend": {
+          "active": false,
+          "confidence": 0.56,
+          "direction": "down",
+          "downScore": 67,
+          "reasons": [
+            "Negative price momentum",
+            "Sell volume delta",
+            "Ask liquidity imbalance",
+            "Local low breakout"
+          ],
+          "score": 67,
+          "since": null,
+          "strength": "strong",
+          "upScore": 0
+        }
+      }
+    ],
+    "connection": {
+      "gapDetected": false,
+      "recoveredAfterGap": false,
+      "states": [
+        {
+          "at": 1735696800001,
+          "resyncCount": 0,
+          "stale": false,
+          "state": "live"
+        }
+      ]
+    },
+    "orderBook": {
+      "asks": [
+        [
+          63300.1,
+          7.67
+        ],
+        [
+          63300.2,
+          8.84
+        ],
+        [
+          63300.3,
+          10.01
+        ],
+        [
+          63300.4,
+          11.18
+        ],
+        [
+          63300.5,
+          12.35
+        ]
+      ],
+      "bestAsk": 63300.1,
+      "bestBid": 63299.9,
+      "bids": [
+        [
+          63299.9,
+          1.003
+        ],
+        [
+          63299.8,
+          1.156
+        ],
+        [
+          63299.7,
+          1.309
+        ],
+        [
+          63299.6,
+          1.462
+        ],
+        [
+          63299.5,
+          1.615
+        ]
+      ],
+      "depth": 5,
+      "fingerprint": "sha256:8aed57dd38e1f99578cde7329c5b8cae98503e5e5874840c211466ea0df57037",
+      "imbalance": -0.76870748,
+      "midPrice": 63300,
+      "spread": 0.2
+    },
+    "sequence": {
+      "depthApplied": 6,
+      "depthGaps": 0,
+      "depthIgnored": 0,
+      "depthInvalid": 0,
+      "depthResults": [
+        {
+          "lastUpdateId": 301,
+          "ordinal": 3,
+          "sequenceEnd": 301,
+          "sequenceStart": 301,
+          "status": "applied"
+        },
+        {
+          "lastUpdateId": 302,
+          "ordinal": 10,
+          "sequenceEnd": 302,
+          "sequenceStart": 302,
+          "status": "applied"
+        },
+        {
+          "lastUpdateId": 303,
+          "ordinal": 17,
+          "sequenceEnd": 303,
+          "sequenceStart": 303,
+          "status": "applied"
+        },
+        {
+          "lastUpdateId": 304,
+          "ordinal": 24,
+          "sequenceEnd": 304,
+          "sequenceStart": 304,
+          "status": "applied"
+        },
+        {
+          "lastUpdateId": 305,
+          "ordinal": 31,
+          "sequenceEnd": 305,
+          "sequenceStart": 305,
+          "status": "applied"
+        },
+        {
+          "lastUpdateId": 306,
+          "ordinal": 38,
+          "sequenceEnd": 306,
+          "sequenceStart": 306,
+          "status": "applied"
+        }
+      ],
+      "depthUnsynced": 0,
+      "finalLastUpdateId": 306,
+      "resyncs": 0,
+      "snapshotsLoaded": 1
+    },
+    "trades": {
+      "buyCount": 15,
+      "buyVolume": 47.214905,
+      "count": 30,
+      "delta": 0.227171,
+      "firstPrice": 64100,
+      "highPrice": 64700.1,
+      "lastPrice": 63299.9,
+      "lowPrice": 63299.9,
+      "priceChangeBps": -124.8206,
+      "realizedVolatilityBps": 214.5651,
+      "sellCount": 15,
+      "sellVolume": 46.987734
+    },
+    "trend": {
+      "activatedDirections": [],
+      "directionTransitions": 5,
+      "finalActive": false,
+      "finalDirection": "down",
+      "finalScore": 67,
+      "maxDownScore": 69,
+      "maxUpScore": 69
+    }
+  },
+  "fixtureSchemaVersion": 1,
+  "generator": {
+    "name": "liquidmap-phase0-fixture-generator",
+    "seed": 1880752131,
+    "version": "1.0.0"
+  },
+  "id": "high-volatility",
+  "market": {
+    "exchange": "binance",
+    "priceBucketTicks": 1,
+    "product": "usd-m-perpetual",
+    "symbol": "BTCUSDT",
+    "tickSize": 0.1,
+    "timeBucketMs": 250,
+    "visibleDepth": 5
+  },
+  "provenance": {
+    "containsExchangeCapture": false,
+    "redistribution": "project-owned-generated-data",
+    "source": "synthetic"
+  },
+  "tags": [
+    "volatile",
+    "whipsaw",
+    "alternating-flow",
+    "hysteresis"
+  ],
+  "title": "High volatility, alternating direction"
+}

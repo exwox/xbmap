@@ -1,0 +1,18 @@
+{"at":1735700400000,"data":{"asks":[[64000.1,1.18],[64000.2,1.36],[64000.3,1.54],[64000.4,1.72],[64000.5,1.9]],"bids":[[63999.9,1.298],[63999.8,1.496],[63999.7,1.694],[63999.6,1.892],[63999.5,2.09]],"exchangeTimestamp":1735700400000,"lastUpdateId":400},"kind":"snapshot","ordinal":1}
+{"at":1735700400001,"data":{"lastEventTimestamp":1735700400001,"message":"Initial synthetic connection synchronized","resyncCount":0,"source":"binance","stale":false,"state":"live"},"kind":"status","ordinal":2}
+{"at":1735700400100,"data":{"exchangeTimestamp":1735700400100,"id":"reconnect-sequence-gap-1","price":64000.1,"quantity":0.3,"receivedTimestamp":1735700400103,"side":"buy"},"kind":"trade","ordinal":3}
+{"at":1735700400200,"data":{"exchangeTimestamp":1735700400200,"id":"reconnect-sequence-gap-2","price":63999.9,"quantity":0.29,"receivedTimestamp":1735700400203,"side":"sell"},"kind":"trade","ordinal":4}
+{"at":1735700400300,"data":{"asks":[[64000.1,1.95]],"bids":[[63999.9,2.25]],"exchangeTimestamp":1735700400300,"previousSequence":400,"receivedTimestamp":1735700400302,"sequenceEnd":401,"sequenceStart":401},"expectedBookResult":"applied","kind":"depth","ordinal":5}
+{"at":1735700400400,"data":{"asks":[],"bids":[[63999.9,2.25]],"exchangeTimestamp":1735700400400,"previousSequence":400,"receivedTimestamp":1735700400402,"sequenceEnd":401,"sequenceStart":401},"expectedBookResult":"ignored","kind":"depth","ordinal":6}
+{"at":1735700400500,"data":{"exchangeTimestamp":1735700400500,"id":"reconnect-sequence-gap-3","price":64000.1,"quantity":0.22,"receivedTimestamp":1735700400503,"side":"buy"},"kind":"trade","ordinal":7}
+{"at":1735700400550,"data":{"name":"before-sequence-gap"},"kind":"checkpoint","ordinal":8}
+{"at":1735700400600,"data":{"asks":[],"bids":[[63999.8,3]],"exchangeTimestamp":1735700400600,"previousSequence":402,"receivedTimestamp":1735700400602,"sequenceEnd":403,"sequenceStart":403},"expectedBookResult":"gap","kind":"depth","ordinal":9}
+{"at":1735700400601,"data":{"lastEventTimestamp":1735700400600,"message":"Sequence gap detected; reconnect scheduled","resyncCount":1,"source":"binance","stale":false,"state":"reconnecting"},"kind":"status","ordinal":10}
+{"at":1735700400700,"data":{"forceInvalid":true,"name":"signal-invalid-during-gap"},"kind":"checkpoint","ordinal":11}
+{"at":1735700400900,"data":{"lastEventTimestamp":1735700400600,"message":"Loading replacement snapshot","resyncCount":1,"source":"binance","stale":false,"state":"syncing"},"kind":"status","ordinal":12}
+{"at":1735700401000,"data":{"asks":[[64001.1,1.18],[64001.2,1.36],[64001.3,1.54],[64001.4,1.72],[64001.5,1.9]],"bids":[[64000.9,1.416],[64000.8,1.632],[64000.7,1.848],[64000.6,2.064],[64000.5,2.28]],"exchangeTimestamp":1735700401000,"lastUpdateId":405},"kind":"snapshot","ordinal":13}
+{"at":1735700401001,"data":{"lastEventTimestamp":1735700401000,"message":"Replacement snapshot synchronized","resyncCount":1,"source":"binance","stale":false,"state":"live"},"kind":"status","ordinal":14}
+{"at":1735700401100,"data":{"asks":[[64001.1,1.8]],"bids":[[64000.9,2.4]],"exchangeTimestamp":1735700401100,"previousSequence":405,"receivedTimestamp":1735700401102,"sequenceEnd":406,"sequenceStart":406},"expectedBookResult":"applied","kind":"depth","ordinal":15}
+{"at":1735700401200,"data":{"exchangeTimestamp":1735700401200,"id":"reconnect-sequence-gap-4","price":64001.1,"quantity":0.28,"receivedTimestamp":1735700401203,"side":"buy"},"kind":"trade","ordinal":16}
+{"at":1735700401300,"data":{"exchangeTimestamp":1735700401300,"id":"reconnect-sequence-gap-5","price":64000.9,"quantity":0.27,"receivedTimestamp":1735700401303,"side":"sell"},"kind":"trade","ordinal":17}
+{"at":1735700401400,"data":{"name":"recovered-after-resync"},"kind":"checkpoint","ordinal":18}

@@ -1,0 +1,73 @@
+{
+  "validationSchemaVersion": 1,
+  "phase": 1,
+  "recordedAt": "2026-08-24T16:04:21.536Z",
+  "status": "conditional-exit",
+  "verification": {
+    "command": "npm run phase1:verify",
+    "typecheckPassed": true,
+    "testFilesPassed": 21,
+    "testsPassed": 93,
+    "productionBuildPassed": true
+  },
+  "faultValidation": {
+    "passed": 8,
+    "failed": 0,
+    "cases": [
+      "lost-event",
+      "duplicate-event",
+      "late-out-of-order-event",
+      "malformed-event",
+      "crossed-update",
+      "disconnect-during-reconciliation",
+      "burst-three-times-baseline",
+      "replay-repeatability"
+    ]
+  },
+  "burst": {
+    "baselineMarketEventsPerSecond": 400,
+    "multiplier": 3,
+    "modeledMarketEventsPerSecond": 1200,
+    "events": 6000,
+    "rejectedDepthUpdates": 0,
+    "processingThroughputEventsPerSecond": 44711.102
+  },
+  "rawCaptureReplay": {
+    "format": "gzip-ndjson",
+    "captureSequenceContiguous": true,
+    "repeatCount": 2,
+    "finalUpdateId": 104,
+    "goldenBookFingerprint": "2e07027bc6fc75bfd4d7820ec3e9386dc5ce96f1398b2726ff5d78780cf377e2",
+    "passed": true
+  },
+  "quickSoak": {
+    "qualification": "smoke-only",
+    "wallClock": true,
+    "durationMs": 5030.997,
+    "eventsProcessed": 6000,
+    "achievedEventsPerSecond": 1192.607,
+    "suspectedUnboundedGrowth": false,
+    "passed": true
+  },
+  "twoMinuteDiagnostic": {
+    "qualification": "custom-diagnostic",
+    "wallClock": true,
+    "durationMs": 120033.835,
+    "eventsProcessed": 144000,
+    "achievedEventsPerSecond": 1199.662,
+    "heapNetGrowthBytesAfterWarmup": 2155120,
+    "heapSlopeBytesPerMinute": 615102.59,
+    "rSquared": 0.330171,
+    "suspectedUnboundedGrowth": false,
+    "observedPlateauAfterBufferFill": true,
+    "passed": true
+  },
+  "eightHourSoak": {
+    "qualification": "eight-hour-exit-gate",
+    "status": "not-run"
+  },
+  "liveExchangeCapture": {
+    "status": "not-run",
+    "reason": "Environment egress and external data-retention approval are unavailable"
+  }
+}
