@@ -30,6 +30,36 @@ tertahan sampai salah satu dari:
 | F5 Kalibrasi baseline alert | shadow mode berhari-hari di jaringan bersih, tinjau `/api/v1/signals/performance` | ⛔ tertahan blokir DNS |
 | F0/F5 Legal ToS/lisensi capture & likuidasi | review eksternal | ⛔ proses hukum |
 
+## 🔓 Temuan 25 Agu: Blokir HANYA di Level DNS
+
+Probe end-to-end dari mesin lokal (IP riil via AliDNS-DoH):
+```
+fstream.binance.com via 35.74.124.67 → TLS valid (verify=0), GET / = 404 (normal)
+api.binance.com     via 13.249.239.121 → /api/v3/ping = 200
+fapi.binance.com    via 65.8.76.4      → /fapi/v1/ping = 200
+```
+**Tidak ada blokiran IP/SNI** — cukup pinning `/etc/hosts`:
+
+```
+# Binance real IPs (cek ulang berkala; pool AWS Tokyo berotasi)
+35.74.124.67   fstream.binance.com
+54.150.3.201   fstream.binance.com
+13.249.239.121 api.binance.com
+65.8.76.4      fapi.binance.com
+```
+
+Verifikasi setelah pinning: `getent hosts fstream.binance.com` → IP riil,
+lalu jalankan gateway tanpa `XBMAP_DEMO`.
+
+Catatan penting:
+- A-record `fstream` TTL=1 (pool Global Accelerator AWS ap-northeast-1 yang
+  berotasi). Bila suatu saat kembali gagal, ambil daftar IP terbaru via
+  `https://dns.alidns.com/resolve?name=fstream.binance.com&type=A`.
+- Kepatuhan: domain Binance diblokir atas regulasi lokal (Bappebti/Kominfo);
+  akses pasca-bypass adalah keputusan & risiko pengguna — evaluasi ToS
+  exchange dan aturan yang berlaku. Untuk infrastruktur produksi, VPS luar
+  negeri tetap opsi paling bersih.
+
 ## Checklist eksekusi ketika jaringan bersih tersedia
 1. `npm run measure:live` (jam normal & volatil) → simpan ke `docs/baselines/`.
 2. Gateway live + `XBMAP_REQUIRE_AUTH=1 XBMAP_ALERT_SHADOW=1` ≥72 jam → ekspor performance rows → kalibrasi multiplier.
