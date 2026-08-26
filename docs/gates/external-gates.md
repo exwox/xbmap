@@ -60,6 +60,19 @@ Catatan penting:
   exchange dan aturan yang berlaku. Untuk infrastruktur produksi, VPS luar
   negeri tetap opsi paling bersih.
 
+## ⚠️ Temuan 25 Agu (lanjutan): `binance.bh` = engine TERPISAH
+`fstream.binance.bh` reachable dan `@depth@100ms`/`@trade` mengalir, NAMUN:
+- Harga BTC di sana ~$78.7k (bukan pasar global), sequence ID skala berbeda 10×.
+- Snapshot REST (`www.binance.bh/fapi`) vs WS (`fstream.binance.bh`) berasal
+  dari backend berbeda → rekonsiliasi mustahil → resync loop.
+**Kesimpulan**: `.bh` tidak dipakai. Env override tetap tersedia untuk
+kebutuhan mirror/proxy lain:
+`XBMAP_BINANCE_WS_BASE · XBMAP_BINANCE_REST_BASE · XBMAP_BINANCE_TRADE_STREAM · XBMAP_FAPI_BASE`
+
+Jalur yang terbukti benar untuk pasar global: **pinning IP riil via /etc/hosts**
+(blokir ISP hanya DNS-hijack; TLS+SNI ke IP riil valid — lihat probe di atas).
+
+
 ## Checklist eksekusi ketika jaringan bersih tersedia
 1. `npm run measure:live` (jam normal & volatil) → simpan ke `docs/baselines/`.
 2. Gateway live + `XBMAP_REQUIRE_AUTH=1 XBMAP_ALERT_SHADOW=1` ≥72 jam → ekspor performance rows → kalibrasi multiplier.
