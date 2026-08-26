@@ -96,6 +96,15 @@ export async function startServer(): Promise<ReturnType<typeof createMarketHttpS
   const rawReplay = await rawReplayRuntimeFromEnvironment(DEFAULT_TICK_SIZE);
   const persistences = await persistencePerSymbol();
 
+  // Phase 5/6: optional Binance endpoint overrides (regional mirror seperti
+  // binance.bh, atau reverse proxy sendiri).
+  const binanceWebsocketBaseUrl = process.env.XBMAP_BINANCE_WS_BASE?.trim() || undefined;
+  const binanceRestBaseUrl = process.env.XBMAP_BINANCE_REST_BASE?.trim() || undefined;
+  const binanceTradeStream =
+    process.env.XBMAP_BINANCE_TRADE_STREAM?.trim().toLowerCase() === "trade"
+      ? "trade" as const
+      : undefined;
+
   // Lazily-created sessions stop consuming feeds once the last subscriber
   // leaves (idle TTL) and flush durable buffers through an async dispose.
   const sessions = new MarketSessionManager({
@@ -115,17 +124,24 @@ export async function startServer(): Promise<ReturnType<typeof createMarketHttpS
         tickSize,
         historyPersistence: persistences.get(symbol) ?? null,
         metrics: observability.scopedHooks(labels),
+        ...(binanceWebsocketBaseUrl ? { binanceWebsocketBaseUrl } : {}),
+        ...(binanceRestBaseUrl ? { binanceRestBaseUrl } : {}),
+        ...(binanceTradeStream ? { binanceTradeStream } : {}),
       });
       return instance;
     },
   });
 
   const defaultInstrument = instrumentFor(DEFAULT_SYMBOL);
+
   const defaultGateway = new MarketGateway({
     symbol: DEFAULT_SYMBOL,
     tickSize: defaultInstrument.tickSize,
     historyPersistence: persistences.get(DEFAULT_SYMBOL) ?? null,
     metrics: observability.hooks,
+    ...(binanceWebsocketBaseUrl ? { binanceWebsocketBaseUrl } : {}),
+    ...(binanceRestBaseUrl ? { binanceRestBaseUrl } : {}),
+    ...(binanceTradeStream ? { binanceTradeStream } : {}),
   });
   sessions.register(defaultGateway, { start: true });
 
@@ -142,6 +158,9 @@ export async function startServer(): Promise<ReturnType<typeof createMarketHttpS
   const derivativesPoller = new BinanceDerivativesPoller({
     symbols: supportedSymbols(),
     intervalMs: envBoundedInteger(process.env.XBMAP_DERIVATIVES_POLL_MS, 30_000, 10_000, 300_000),
+    ...(process.env.XBMAP_FAPI_BASE?.trim()
+      ? { baseUrl: process.env.XBMAP_FAPI_BASE.trim() }
+      : {}),
   });
   derivativesPoller.on((update) => insights.setDerivatives(update));
 

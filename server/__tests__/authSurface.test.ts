@@ -74,7 +74,18 @@ describe("phase 6 hardening and auth surface", () => {
     const csp = response.headers.get("content-security-policy");
     expect(csp).toContain("script-src 'self'");
     expect(csp).toContain("frame-ancestors 'none'");
+    expect(csp).toContain("https://fonts.googleapis.com");
     expect(response.headers.get("x-frame-options")).toBe("DENY");
+  });
+
+  it("exposes auth/status even without an auth layer", async () => {
+    const port = await started();
+    const response = await fetch(`http://127.0.0.1:${port}/api/v1/auth/status`);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      required: false,
+      authenticated: true,
+    });
   });
 
   it("guards metrics and observability routes with the admin token", async () => {

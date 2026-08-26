@@ -173,9 +173,9 @@ export function createMarketHttpServer(
   const contentSecurityPolicy = [
     "default-src 'self'",
     "script-src 'self'",
-    "style-src 'self'",
+    "style-src 'self' https://fonts.googleapis.com",
+    "font-src 'self' data: https://fonts.gstatic.com",
     "img-src 'self' data:",
-    "font-src 'self' data:",
     "connect-src 'self' ws: wss:",
     "object-src 'none'",
     "base-uri 'self'",
@@ -207,19 +207,29 @@ export function createMarketHttpServer(
   const auth = options.auth ?? null;
   const authRequired = auth?.required === true;
 
-  if (auth) {
-    app.get("/api/v1/auth/status", (request, response) => {
-      const token = readSessionToken(request.headers.cookie);
-      const session = token ? auth.service.validateSession(token) : null;
+  // Status selalu ada — frontend memakainya untuk mendeteksi mode gateway.
+  app.get("/api/v1/auth/status", (request, response) => {
+    if (!auth) {
       response.json({
         schemaVersion: SCHEMA_VERSION,
         serverTimestamp: Date.now(),
-        required: authRequired,
-        authenticated: session !== null,
-        ...(session ? { username: session.username } : {}),
+        required: false,
+        authenticated: true,
       });
+      return;
+    }
+    const token = readSessionToken(request.headers.cookie);
+    const session = token ? auth.service.validateSession(token) : null;
+    response.json({
+      schemaVersion: SCHEMA_VERSION,
+      serverTimestamp: Date.now(),
+      required: authRequired,
+      authenticated: session !== null,
+      ...(session ? { username: session.username } : {}),
     });
+  });
 
+  if (auth) {
     app.post("/api/v1/auth/login", (request, response) => {
       if (!isPlainObject(request.body)) {
         sendError(response, 400, "INVALID_LOGIN", "JSON object required");

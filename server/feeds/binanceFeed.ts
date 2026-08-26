@@ -25,11 +25,13 @@ interface BinanceDepthPayload {
 }
 
 interface BinanceTradePayload {
-  e: "aggTrade";
+  e: "aggTrade" | "trade";
   E: number;
   T: number;
   s: string;
-  a: number;
+  /** aggTrade aggregate id (`a`) or raw trade id (`t`). */
+  a?: number;
+  t?: number;
   p: string;
   q: string;
   m: boolean;
@@ -77,6 +79,11 @@ export interface BinanceFeedOptions {
   snapshotLimit?: number;
   restBaseUrl?: string;
   websocketBaseUrl?: string;
+  /**
+   * Trade stream type. Global endpoints serve `aggTrade`; regional mirrors
+   * (e.g. binance.bh) expose `trade` instead.
+   */
+  tradeStream?: "aggTrade" | "trade";
   maxBufferedDepth?: number;
   /** Dependency seams keep reconciliation and fault tests deterministic. */
   snapshotFetcher?: () => Promise<DepthSnapshot>;
@@ -97,12 +104,13 @@ interface FetchedSnapshot {
 export function buildBinanceStreamUrls(
   websocketBaseUrl: string,
   symbol: string,
+  tradeStream: "aggTrade" | "trade" = "aggTrade",
 ): BinanceStreamUrls {
   const base = websocketBaseUrl.replace(/\/+$/, "");
   const streamSymbol = symbol.toLowerCase();
   return {
     depth: `${base}/public/ws/${streamSymbol}@depth@100ms`,
-    trade: `${base}/market/ws/${streamSymbol}@aggTrade`,
+    trade: `${base}/market/ws/${streamSymbol}@${tradeStream}`,
   };
 }
 
@@ -137,6 +145,7 @@ export class BinanceFeed extends EventEmitter {
   readonly maxBufferedDepth: number;
   private readonly restBaseUrl: string;
   private readonly websocketBaseUrl: string;
+  private readonly tradeStream: "aggTrade" | "trade";
   private readonly snapshotFetcher?: () => Promise<DepthSnapshot>;
   private readonly socketFactory: BinanceSocketFactory;
 
@@ -148,6 +157,7 @@ export class BinanceFeed extends EventEmitter {
     this.maxBufferedDepth = clampInteger(options.maxBufferedDepth ?? 20_000, 1, 100_000);
     this.restBaseUrl = options.restBaseUrl ?? "https://fapi.binance.com";
     this.websocketBaseUrl = options.websocketBaseUrl ?? "wss://fstream.binance.com";
+    this.tradeStream = options.tradeStream === "trade" ? "trade" : "aggTrade";
     this.snapshotFetcher = options.snapshotFetcher;
     this.socketFactory = options.socketFactory ?? ((url, clientOptions) =>
       new WebSocket(url, clientOptions));
@@ -207,7 +217,7 @@ export class BinanceFeed extends EventEmitter {
       isReconnect ? "Reconnecting routed Binance USD-M streams" : "Connecting to Binance USD-M",
     );
 
-    const urls = buildBinanceStreamUrls(this.websocketBaseUrl, this.symbol);
+    const urls = buildBinanceStreamUrls(this.websocketBaseUrl, this.symbol, this.tradeStream);
     const clientOptions: ClientOptions = {
       handshakeTimeout: 8_000,
       perMessageDeflate: false,
@@ -662,11 +672,11 @@ function isDepthPayload(payload: unknown): payload is BinanceDepthPayload {
 function isTradePayload(payload: unknown): payload is BinanceTradePayload {
   if (!payload || typeof payload !== "object") return false;
   const candidate = payload as Partial<BinanceTradePayload>;
-  return candidate.e === "aggTrade" &&
+  return (candidate.e === "aggTrade" || candidate.e === "trade") &&
     typeof candidate.s === "string" &&
     Number.isSafeInteger(candidate.E) &&
     Number.isSafeInteger(candidate.T) &&
-    Number.isSafeInteger(candidate.a) &&
+    (Number.isSafeInteger(candidate.a) || Number.isSafeInteger(candidate.t)) &&
     typeof candidate.p === "string" &&
     typeof candidate.q === "string" &&
     typeof candidate.m === "boolean";
@@ -698,7 +708,7 @@ function normalizeTrade(payload: BinanceTradePayload, receivedTimestamp: number)
     payload.T < 0
   ) return null;
   return {
-    id: String(payload.a),
+    id: String(payload.a ?? payload.t ?? 0),
     exchangeTimestamp: payload.T,
     receivedTimestamp,
     price,

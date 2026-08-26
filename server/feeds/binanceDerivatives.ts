@@ -20,6 +20,8 @@ export type DerivativesListener = (update: DerivativesUpdate) => void;
 export interface DerivativesPollerOptions {
   symbols?: string[];
   intervalMs?: number;
+  /** Override for regional mirrors / proxies (default fapi.binance.com). */
+  baseUrl?: string;
   fetchFn?: typeof fetch;
   now?: () => number;
 }
@@ -35,6 +37,7 @@ export class BinanceDerivativesPoller {
   private readonly symbols: string[];
   private readonly intervalMs: number;
   private readonly fetchFn: typeof fetch;
+  private readonly baseUrl: string;
   private readonly now: () => number;
   private readonly listeners = new Set<DerivativesListener>();
   private timer: NodeJS.Timeout | null = null;
@@ -45,6 +48,7 @@ export class BinanceDerivativesPoller {
     this.symbols = options.symbols ?? [];
     this.intervalMs = Math.max(10_000, options.intervalMs ?? 30_000);
     this.fetchFn = options.fetchFn ?? ((input, init) => fetch(input, init));
+    this.baseUrl = (options.baseUrl ?? "https://fapi.binance.com").replace(/\/+$/, "");
     this.now = options.now ?? Date.now;
   }
 
@@ -80,7 +84,7 @@ export class BinanceDerivativesPoller {
     const fetchedAtMs = this.now();
     try {
       const response = await this.fetchFn(
-        "https://fapi.binance.com/fapi/v1/premiumIndex",
+        `${this.baseUrl}/fapi/v1/premiumIndex`,
         { signal: AbortSignal.timeout(5_000) },
       );
       if (!response.ok) throw new Error(`premiumIndex HTTP ${response.status}`);
@@ -116,7 +120,7 @@ export class BinanceDerivativesPoller {
   private async fetchOpenInterest(symbol: string): Promise<number | null> {
     try {
       const response = await this.fetchFn(
-        `https://fapi.binance.com/fapi/v1/openInterest?symbol=${encodeURIComponent(symbol)}`,
+        `${this.baseUrl}/fapi/v1/openInterest?symbol=${encodeURIComponent(symbol)}`,
         { signal: AbortSignal.timeout(5_000) },
       );
       if (!response.ok) return null;

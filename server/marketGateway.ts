@@ -50,6 +50,12 @@ export interface MarketGatewayOptions {
   tickSize?: number;
   settings?: Partial<GatewaySettings>;
   forceDemo?: boolean;
+  /** Override Binance WS stream base (regional mirror / proxy). */
+  binanceWebsocketBaseUrl?: string;
+  /** Override Binance REST snapshot base (fapi-compatible host). */
+  binanceRestBaseUrl?: string;
+  /** Trade stream type: global serves aggTrade; mirrors may serve trade. */
+  binanceTradeStream?: "aggTrade" | "trade";
   /** `undefined` reads the opt-in environment config; `null` explicitly disables it. */
   rawCapture?: RawCaptureRecorder | null;
   /** Pre-opened durable projection; omitted in isolated unit tests. */
@@ -167,7 +173,13 @@ export class MarketGateway extends EventEmitter {
       this.settingsValue.bubbleBucketMs,
       this.tickSize,
     );
-    this.binance = new BinanceFeed({ symbol: this.symbol, tickSize: this.tickSize });
+    this.binance = new BinanceFeed({
+      symbol: this.symbol,
+      tickSize: this.tickSize,
+      ...(options.binanceRestBaseUrl ? { restBaseUrl: options.binanceRestBaseUrl } : {}),
+      ...(options.binanceWebsocketBaseUrl ? { websocketBaseUrl: options.binanceWebsocketBaseUrl } : {}),
+      ...(options.binanceTradeStream ? { tradeStream: options.binanceTradeStream } : {}),
+    });
     this.demo = new DemoFeed({ symbol: this.symbol, tickSize: this.tickSize });
     this.bindFeeds();
   }
